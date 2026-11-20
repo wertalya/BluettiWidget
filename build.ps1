@@ -21,5 +21,5 @@ Copy-Item -LiteralPath README.md,LICENSE,THIRD_PARTY.md -Destination dist\Bluett
 $sourceTarget = Join-Path $PSScriptRoot 'dist\BluettiWidget\source'
 New-Item -ItemType Directory -Path $sourceTarget -Force | Out-Null
 Copy-Item -LiteralPath widget.py,views.py,feedback.py,test_feedback.py,powerlink.py,models.py,test_models.py,runtime_estimate.py,requirements.txt,build.ps1,build_portable.py,stop_widget.ps1,check_widget.py,diagnose.py,stream_probe.py,live_checks.py,qa_render.py,README.md,README.uk.md,settings.example.ini,CONTRIBUTING.md,LICENSE,THIRD_PARTY.md -Destination $sourceTarget -Force
-Copy-Item -LiteralPath assets -Destination $sourceTarget -Recurse -Force
+Copy-Item -LiteralPath assets,docs -Destination $sourceTarget -Recurse -Force
 Copy-Item -LiteralPath hooks -Destination $sourceTarget -Recurse -Force

@@ -1,0 +1,18 @@
+name: Report a bug
+description: Report a Windows, Bluetooth or widget issue.
+title: "[Bug] "
+body:
+  - type: input
+    id: environment
+    attributes:
+      label: Widget version, Windows version and BLUETTI model
+      description: Include the firmware version if available. Leave out Bluetooth addresses and serial numbers.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include what you expected and what happened.
+    validations:
+      required: true

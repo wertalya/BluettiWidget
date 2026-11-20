@@ -46,19 +46,20 @@ class StationProfile:
         return (required, *((start, end - start) for start, end in blocks))
 
 
+# Register maps come from the pinned BLE library. A model needs a charge
+# field to appear in discovery. Only reviewed overrides can enable writes.
 PROFILES = {
-    profile.model: profile for profile in (
-        StationProfile('AC180P', 1440, controls=True, tested=True,
-                       read_blocks=((140, 8), (2011, 2), (2020, 1))),
-        StationProfile('AC180', 1152, read_blocks=((140, 8),)),
-        StationProfile('AC2A'),
-        StationProfile('AC60'),
-        StationProfile('AC70'),
-        StationProfile('AC70P'),
-        StationProfile('AC200L'),
-        StationProfile('EB3A'),
-    )
+    name: StationProfile(name)
+    for name, factory in DEVICES.items()
+    if any(field.name == SOC for field in factory().fields)
 }
+for profile in (
+    StationProfile('AC180P', 1440, controls=True, tested=True,
+                   read_blocks=((140, 8), (2011, 2), (2020, 1))),
+    StationProfile('AC180', 1152, read_blocks=((140, 8),)),
+):
+    PROFILES[profile.model] = profile
+
 MODEL_NAMES = {name.upper(): name for name in PROFILES}
 
 

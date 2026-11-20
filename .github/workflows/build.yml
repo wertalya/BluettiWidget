@@ -27,9 +27,12 @@ jobs:
           if (Test-Path portable/settings.ini) { throw 'Personal settings must not be in a release' }
       - uses: actions/upload-artifact@v4
         with:
-          name: PowerCompanion-Windows-preview
+          name: BluettiWidget-Windows-preview
           path: |
             portable/BluettiWidget.exe
             LICENSE
             THIRD_PARTY.md
             README.md
+            README.uk.md
+            settings.example.ini
+            docs/compatibility.md

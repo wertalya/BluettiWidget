@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, patch
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from bleak.exc import BleakError
 from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import QCoreApplication, QEvent
+from PySide6.QtCore import QCoreApplication, QEvent, Qt
 from bluetti_bt_lib.enums import ChargingMode
 from powerlink import BluetoothWorker, InvalidFrame, LiveSession, RegisterRejected, normalize
 from bluetti_bt_lib.registers import ReadableRegisters
@@ -160,6 +160,26 @@ class Checks(unittest.TestCase):
             self.assertTrue(disposed.is_set())
             self.assertIsNone(worker.live)
         asyncio.run(exercise())
+
+    def test_taskbar_visibility_defaults_to_tray_and_is_saved(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'settings.ini'
+            panel = Panel(start_worker=False, settings_path=path)
+            self.assertEqual(panel.windowType(), Qt.WindowType.Tool)
+            panel.show()
+            panel.top_action.setChecked(True)
+            panel.taskbar_action.setChecked(True)
+            self.assertTrue(panel.isVisible())
+            self.assertEqual(panel.windowType(), Qt.WindowType.Window)
+            self.assertTrue(panel.windowFlags() & Qt.WindowType.WindowStaysOnTopHint)
+            self.dispose(panel)
+
+            panel = Panel(start_worker=False, settings_path=path)
+            self.assertTrue(panel.taskbar_action.isChecked())
+            self.assertEqual(panel.windowType(), Qt.WindowType.Window)
+            panel.taskbar_action.setChecked(False)
+            self.assertEqual(panel.windowType(), Qt.WindowType.Tool)
+            self.dispose(panel)
 
     def test_tray_menu_reflects_connection_and_visibility(self):
         with tempfile.TemporaryDirectory() as tmp:

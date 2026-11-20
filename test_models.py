@@ -1,6 +1,8 @@
 import asyncio
 import unittest
-from models import detect_profile, get_profile
+from unittest.mock import AsyncMock, patch
+from bluetti_bt_lib.devices import DEVICES
+from models import PROFILES, SOC, detect_profile, get_profile
 from powerlink import BluetoothWorker
 from runtime_estimate import RuntimeEstimator
 
@@ -8,9 +10,19 @@ class ModelTests(unittest.TestCase):
     def test_detection_is_explicit_and_longest_model_wins(self):
         self.assertEqual(detect_profile('AC180P12345678').model,'AC180P')
         self.assertEqual(detect_profile('AC18012345678').model,'AC180')
-        for name in ('AC180T1234','AC180P-UNKNOWN','AC200PL123','SomeOtherStation'):
+        for name in ('AC180P-UNKNOWN', 'AC200PX123', 'SomeOtherStation'):
             self.assertIsNone(detect_profile(name))
         with self.assertRaises(ValueError): get_profile('UNKNOWN')
+
+    def test_upstream_profiles_use_their_own_charge_field_and_read_only_defaults(self):
+        self.assertEqual(set(PROFILES), set(DEVICES))
+        for name, profile in PROFILES.items():
+            with self.subTest(model=name):
+                self.assertEqual(detect_profile(name + '9876'), profile)
+                device = profile.device_factory()
+                charge = next(field for field in device.fields if field.name == SOC)
+                self.assertEqual(profile.read_plan(device)[0], (charge.address, charge.size))
+                self.assertEqual(profile.controls, name == 'AC180P')
 
     def test_profiles_follow_their_own_register_layout(self):
         for name in ('AC200L', 'EB3A'):
@@ -37,6 +49,22 @@ class ModelTests(unittest.TestCase):
         small=RuntimeEstimator(capacity_wh=get_profile('AC180').capacity_wh)
         large=RuntimeEstimator(capacity_wh=get_profile('AC180P').capacity_wh)
         self.assertAlmostEqual(small.update(100,0,200,0)/large.update(100,0,200,0),.8)
+
+    def test_encrypted_model_reads_station_without_selecting_packs(self):
+        async def exercise():
+            worker = BluetoothWorker()
+            worker.profile = get_profile('AC300')
+            worker.device = worker.profile.device_factory()
+            worker.plan = worker.profile.read_plan(worker.device)
+            worker.encrypted = True
+            with patch.object(worker, 'find_device', AsyncMock()), \
+                 patch('powerlink.BleakClient', return_value=AsyncMock()), \
+                 patch('powerlink.DeviceReader') as reader:
+                reader.return_value.read = AsyncMock(return_value={SOC: 42})
+                self.assertEqual(await worker.read(), {SOC: 42})
+                self.assertEqual(reader.call_args.args[1].max_packs, 0)
+                self.assertGreater(worker.device.max_packs, 0)
+        asyncio.run(exercise())
 
     def test_experimental_model_cannot_write(self):
         worker=BluetoothWorker()

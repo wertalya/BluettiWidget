@@ -1,5 +1,6 @@
 """BLUETTI BLE worker. All Bluetooth operations stay off the UI thread."""
 import asyncio
+from copy import copy
 from decimal import Decimal
 import logging
 import math
@@ -271,7 +272,13 @@ class BluetoothWorker(QThread):
         async with asyncio.timeout(30):
             device = await self.find_device()
             async with BleakClient(device, timeout=12) as client:
-                reader = DeviceReader(self.address, self.device, loop.create_future,
+                device_map = self.device
+                if device_map.max_packs:
+                    # The library still selects every pack when only_registers
+                    # is passed. This widget requests station-level data only.
+                    device_map = copy(device_map)
+                    device_map.max_packs = 0
+                reader = DeviceReader(self.address, device_map, loop.create_future,
                     DeviceReaderConfig(timeout=15, use_encryption=self.encrypted),
                     lock=asyncio.Lock(), ble_client=client)
                 data = await reader.read(only_registers=[ReadableRegisters(*block) for block in self.plan])

@@ -171,6 +171,7 @@ class Panel(QWidget):
         self.size_name = self.settings.value('size', 'M')
         self.position_locked = self.settings.value('position_locked', False, type=bool)
         self.always_on_top = self.settings.value('always_on_top', False, type=bool)
+        self.show_in_taskbar = self.settings.value('show_in_taskbar', False, type=bool)
         self.opacity = min(100, max(65, self.settings.value('opacity', 100, type=int)))
         saved_model = self.settings.value('model', 'AC180P')
         saved_address = self.settings.value('address', '') if saved_model in PROFILES else ''
@@ -178,7 +179,7 @@ class Panel(QWidget):
         self.has_station = bool(saved_address)
         self.setWindowTitle('BluettiWidget')
         self.setWindowIcon(QIcon(str(APP_ICON)))
-        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Window)
+        self.setWindowFlags(self.window_flags())
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
@@ -269,7 +270,6 @@ class Panel(QWidget):
         self.runtime_estimator = RuntimeEstimator(capacity_wh=self.station_capacity())
         self.apply_size(self.size_name)
         self.setWindowOpacity(self.opacity / 100)
-        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, self.always_on_top)
         self.restore_position()
         if start_worker and not demo:
             self.worker.start()
@@ -328,6 +328,10 @@ class Panel(QWidget):
         self.top_action.setCheckable(True)
         self.top_action.setChecked(self.always_on_top)
         self.top_action.toggled.connect(self.set_on_top)
+        self.taskbar_action = appearance.addAction('Показувати на панелі завдань')
+        self.taskbar_action.setCheckable(True)
+        self.taskbar_action.setChecked(self.show_in_taskbar)
+        self.taskbar_action.toggled.connect(self.set_taskbar)
         opacity_menu = appearance.addMenu('Непрозорість')
         opacity_group = QActionGroup(opacity_menu)
         for value in (100, 90, 80, 70):
@@ -393,13 +397,30 @@ class Panel(QWidget):
         self.position_locked = locked
         self.save('position_locked', locked)
 
+    def window_flags(self):
+        window_type = Qt.WindowType.Window if self.show_in_taskbar else Qt.WindowType.Tool
+        flags = Qt.WindowType.FramelessWindowHint | window_type
+        if self.always_on_top:
+            flags |= Qt.WindowType.WindowStaysOnTopHint
+        return flags
+
+    def refresh_window_flags(self):
+        visible, position = self.isVisible(), self.pos()
+        self.setWindowFlags(self.window_flags())
+        self.move(position)
+        if visible:
+            self.show()
+            self.keep_on_screen()
+
     def set_on_top(self, enabled):
         self.always_on_top = enabled
         self.save('always_on_top', enabled)
-        visible = self.isVisible()
-        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, enabled)
-        if visible:
-            self.show()
+        self.refresh_window_flags()
+
+    def set_taskbar(self, enabled):
+        self.show_in_taskbar = enabled
+        self.save('show_in_taskbar', enabled)
+        self.refresh_window_flags()
 
     def set_opacity(self, value):
         self.opacity = value
