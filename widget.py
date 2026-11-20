@@ -1,6 +1,7 @@
 """BLUETTI desktop companion: compact instruments, details, tray and BLE handoff."""
 import argparse
 import logging
+import math
 import sys
 import time
 from pathlib import Path
@@ -8,14 +9,15 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QSettings, QTimer, QLockFile, QPoint
 from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPixmap, QActionGroup
 from PySide6.QtWidgets import (QApplication, QComboBox, QDialog, QGridLayout,
-    QHBoxLayout, QMenu, QMessageBox, QPushButton, QSystemTrayIcon, QVBoxLayout, QWidget)
+    QHBoxLayout, QMenu, QMessageBox, QPushButton, QSizePolicy, QSystemTrayIcon, QVBoxLayout, QWidget)
 from powerlink import BluetoothWorker
 from runtime_estimate import RuntimeEstimator, format_runtime
-from models import get_profile
+from models import PROFILES, get_profile
 from feedback import FeedbackDialog, VERSION
 from views import STYLE, INPUT, OUTPUT, GREEN, MUTED, InstrumentCluster, PowerHistory, label
 
 APP_DIR = Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path(__file__).resolve().parent
+APP_ICON = Path(__file__).resolve().parent / 'assets' / 'bluetti-widget.ico'
 SIZES = {'S': (320, 204), 'M': (360, 220), 'L': (420, 246)}
 
 
@@ -57,20 +59,28 @@ class Picker(QDialog):
     def __init__(self, worker, parent):
         super().__init__(parent)
         self.worker = worker
+        self.scanning = False
+        self.connecting = False
         self.setWindowTitle('Підключення BLUETTI')
-        self.setMinimumWidth(420)
+        self.resize(380, 220)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(22, 22, 22, 22)
-        layout.setSpacing(14)
-        layout.addWidget(label('Знайдемо твою станцію', size=21))
-        layout.addWidget(label('Увімкни Bluetooth на ПК та AC180P.\nЗакрий з’єднання з нею на телефоні.', 'muted'))
+        layout.setSpacing(12)
+        layout.addWidget(label('Підключити станцію', size=22))
+        hint = label('Увімкни Bluetooth на ПК і на станції. Якщо вона зайнята, закрий підключення в застосунку BLUETTI на телефоні.', 'muted')
+        hint.setWordWrap(True)
+        layout.addWidget(hint)
         self.combo = QComboBox()
+        self.combo.setAccessibleName('Знайдені станції BLUETTI')
+        self.combo.setMinimumContentsLength(14)
+        self.combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
         layout.addWidget(self.combo)
-        self.note = label('Натисни «Шукати».', 'muted')
+        self.note = label('', 'muted')
+        self.note.setTextFormat(Qt.TextFormat.PlainText)
         self.note.setWordWrap(True)
-        layout.addWidget(self.note)
+        layout.addWidget(self.note, 1)
         row = QHBoxLayout()
-        self.scan = QPushButton('Шукати')
+        self.scan = QPushButton('Шукати знову')
         self.connect = QPushButton('Підключити')
         self.connect.setObjectName('primary')
         self.connect.setEnabled(False)
@@ -80,30 +90,63 @@ class Picker(QDialog):
         self.scan.clicked.connect(self.search)
         self.connect.clicked.connect(self.choose)
         worker.devices.connect(self.found)
-        worker.failure.connect(self.error)
+        worker.scan_failed.connect(self.search_failed)
+        worker.status.connect(self.connection_status)
+        worker.failure.connect(self.connection_failed)
+        worker.retrying.connect(self.connection_status)
 
     def search(self):
+        if self.scanning:
+            return
+        self.scanning = True
+        self.connecting = False
         self.combo.clear()
+        self.combo.setEnabled(False)
         self.connect.setEnabled(False)
         self.scan.setEnabled(False)
-        self.note.setText('Шукаю станції… приблизно 8 секунд')
+        self.note.setText('Шукаю станції поблизу · приблизно 8 секунд')
         self.worker.submit('scan')
 
     def found(self, devices):
+        self.scanning = False
         self.scan.setEnabled(True)
+        self.combo.clear()
         for device in devices:
             self.combo.addItem(device['name'], device)
+        self.combo.setEnabled(bool(devices))
         self.connect.setEnabled(bool(devices))
-        self.note.setText('Вибери свою станцію.' if devices else 'Не знайдено. Перевір Bluetooth і телефон.')
+        self.note.setText('Вибери свою станцію зі списку.' if devices else
+                          'Сумісних станцій поруч не видно. Перевір Bluetooth на станції та повтори пошук.')
 
-    def error(self, message):
+    def search_failed(self, _message):
+        self.scanning = False
         self.scan.setEnabled(True)
-        self.note.setText(message)
+        self.note.setText('Пошук не вдався. Перевір Bluetooth у Windows і повтори спробу.')
+
+    def connection_status(self, message):
+        if self.connecting:
+            self.note.setText(message)
+
+    def connection_failed(self, message):
+        if self.connecting:
+            self.note.setText(message)
+            self.combo.setEnabled(True)
+            self.scan.setEnabled(True)
+            self.connect.setEnabled(self.combo.currentData() is not None)
 
     def choose(self):
-        if self.combo.currentData():
-            self.worker.submit('select', self.combo.currentData())
-            self.accept()
+        device = self.combo.currentData()
+        if device:
+            self.connecting = True
+            self.scan.setEnabled(False)
+            self.combo.setEnabled(False)
+            self.connect.setEnabled(False)
+            self.note.setText('Підключаюся…')
+            self.worker.submit('select', device)
+
+    def connected(self):
+        self.connecting = False
+        self.accept()
 
 
 class Panel(QWidget):
@@ -123,14 +166,18 @@ class Panel(QWidget):
         self.stale = True
         self.drag_offset = None
         self.picker = None
+        self.pending_station = None
         self.details = None
         self.size_name = self.settings.value('size', 'M')
         self.position_locked = self.settings.value('position_locked', False, type=bool)
         self.always_on_top = self.settings.value('always_on_top', False, type=bool)
         self.opacity = min(100, max(65, self.settings.value('opacity', 100, type=int)))
-        self.profile = get_profile(self.settings.value('model','AC180P'))
-        self.setWindowTitle('BluettiWidget · '+self.profile.model)
-        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool)
+        saved_model = self.settings.value('model', 'AC180P')
+        saved_address = self.settings.value('address', '') if saved_model in PROFILES else ''
+        self.profile = PROFILES.get(saved_model, PROFILES['AC180P'])
+        self.setWindowTitle('BluettiWidget')
+        self.setWindowIcon(QIcon(str(APP_ICON)))
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Window)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
@@ -145,15 +192,15 @@ class Panel(QWidget):
         self.connection_dot.setStyleSheet(f'color: {MUTED}; font-size: 10px;')
         header.addWidget(self.connection_dot)
         header.addWidget(label('BLUETTI', 'eyebrow'))
-        self.model_label = label(self.profile.model,'muted')
+        self.model_label = label(self.profile.model if demo or saved_address else '', 'muted')
         header.addWidget(self.model_label)
         header.addStretch()
-        feedback_button = QPushButton('?')
-        feedback_button.setObjectName('quiet')
-        feedback_button.setToolTip('Написати автору: проблема або побажання')
-        feedback_button.setAccessibleName('Написати автору')
-        feedback_button.clicked.connect(self.open_feedback)
-        header.addWidget(feedback_button)
+        self.connect_button = QPushButton('Станція')
+        self.connect_button.setObjectName('quiet')
+        self.connect_button.setToolTip('Знайти або змінити станцію BLUETTI')
+        self.connect_button.clicked.connect(self.open_picker)
+        self.connect_button.setEnabled(not demo)
+        header.addWidget(self.connect_button)
         details_button = QPushButton('↗')
         details_button.setObjectName('quiet')
         details_button.setToolTip('Деталі та налаштування')
@@ -193,8 +240,11 @@ class Panel(QWidget):
         self.bluetooth_button.clicked.connect(self.toggle_bluetooth)
         controls.addWidget(self.bluetooth_button)
         layout.addLayout(controls)
-        self.status = label('Підключи станцію через меню ···', 'muted')
+        self.status = label('Підключи станцію, щоб побачити заряд', 'muted')
+        self.status.setTextFormat(Qt.TextFormat.PlainText)
+        self.status.setToolTip(self.status.text())
         self.status.setStyleSheet(f'font-size: 11px; color: {MUTED};')
+        self.status.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
         self.status.setFixedHeight(18)
         layout.addWidget(self.status)
         self.menu = self.make_menu()
@@ -205,6 +255,7 @@ class Panel(QWidget):
         self.tray.show()
         self.worker.reading.connect(self.update_reading)
         self.worker.failure.connect(self.failed)
+        self.worker.retrying.connect(self.set_status)
         self.worker.status.connect(self.worker_status)
         self.worker.selected.connect(self.on_selected)
         self.worker.command_done.connect(self.command_finished)
@@ -214,19 +265,20 @@ class Panel(QWidget):
         self.clock.timeout.connect(self.check_age)
         self.clock.start()
         self.history = PowerHistory()
-        self.runtime_estimator = RuntimeEstimator(capacity_wh=self.profile.capacity_wh)
+        self.runtime_estimator = RuntimeEstimator(capacity_wh=self.station_capacity())
         self.apply_size(self.size_name)
         self.setWindowOpacity(self.opacity / 100)
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, self.always_on_top)
         self.restore_position()
         if start_worker and not demo:
             self.worker.start()
-            address = self.settings.value('address', '')
-            if address:
-                self.worker.submit('select', {'address': address,
+            if saved_address:
+                self.worker.submit('select', {'address': saved_address,
                     'model':self.profile.model,
                     'encrypted': self.settings.value('encrypted', False, type=bool)})
                 self.set_status('Підключаюся…')
+            else:
+                QTimer.singleShot(0, self.open_picker)
         if demo:
             self.update_reading({'total_battery_percent': 81, 'ac_input_power': 1456,
                 'dc_input_power': 0, 'ac_output_power': 329, 'dc_output_power': 12,
@@ -242,7 +294,7 @@ class Panel(QWidget):
         menu.addAction('Написати автору: проблема або побажання',self.open_feedback)
         self.handoff_action = menu.addAction('Звільнити Bluetooth для телефону', self.toggle_bluetooth)
         menu.addSeparator()
-        sizes = menu.addMenu('Розмір приборки')
+        sizes = menu.addMenu('Розмір віджета')
         group = QActionGroup(sizes)
         self.size_actions = {}
         for name, dimensions in SIZES.items():
@@ -284,6 +336,7 @@ class Panel(QWidget):
             self.size_actions[self.size_name].setChecked(True)
         self.save('size', self.size_name)
         self.keep_on_screen()
+        QTimer.singleShot(0, self, lambda: self.set_status(self.status.toolTip()))
 
     def set_position_locked(self, locked):
         self.position_locked = locked
@@ -352,8 +405,11 @@ class Panel(QWidget):
             return
         if self.picker is None:
             self.picker = Picker(self.worker, self)
+        if not self.picker.isVisible() and not self.picker.connecting:
+            self.picker.search()
         self.picker.show()
         self.picker.raise_()
+        self.picker.activateWindow()
 
     def open_details(self):
         if self.details is None:
@@ -368,7 +424,7 @@ class Panel(QWidget):
     def build_details(self):
         self.details = QDialog(self)
         self.details.setWindowTitle('BLUETTI · '+self.profile.model+' · Деталі')
-        self.details.setMinimumWidth(440)
+        self.details.resize(440, 440)
         layout = QVBoxLayout(self.details)
         layout.setContentsMargins(22, 20, 22, 20)
         layout.setSpacing(13)
@@ -381,6 +437,7 @@ class Panel(QWidget):
         layout.addLayout(row)
         self.detail_status = label('Очікую дані', 'muted')
         self.detail_status.setWordWrap(True)
+        self.detail_status.setTextFormat(Qt.TextFormat.PlainText)
         layout.addWidget(self.detail_status)
         self.runtime_label = label('Орієнтовний час роботи: —', size=17)
         layout.addWidget(self.runtime_label)
@@ -442,7 +499,8 @@ class Panel(QWidget):
         self.set_controls(self.fresh() and not self.busy)
 
     def set_status(self, message):
-        self.status.setText(message)
+        width = self.status.width() if self.status.width() > 0 else self.width()
+        self.status.setText(self.status.fontMetrics().elidedText(message, Qt.TextElideMode.ElideRight, width))
         self.status.setToolTip(message)
         if self.details:
             self.detail_status.setText(message)
@@ -456,15 +514,14 @@ class Panel(QWidget):
 
     def on_selected(self, device):
         self.profile = get_profile(device.get('model','AC180P'))
-        self.save('model',self.profile.model)
+        self.pending_station = device
         self.model_label.setText(self.profile.model)
         if self.details:
             self.detail_model.setText(self.profile.model)
             self.details.setWindowTitle('BLUETTI · '+self.profile.model+' · Деталі')
-        self.runtime_estimator.capacity_wh = self.profile.capacity_wh
-        self.save('address', device['address'])
-        self.save('encrypted', device.get('encrypted', False))
+        self.runtime_estimator.capacity_wh = self.station_capacity()
         self.encrypted = device.get('encrypted', False)
+        self.alerted = False
         self.history.max_gap = 45 if self.encrypted else 6
         self.data = {}
         self.last_update = 0
@@ -481,6 +538,13 @@ class Panel(QWidget):
         self.refresh_details()
         self.set_status('Підключаюся…')
 
+    def station_capacity(self):
+        try:
+            capacity = float(self.settings.value(f'capacity_wh/{self.profile.model}', 0))
+        except (TypeError, ValueError):
+            capacity = 0
+        return capacity if math.isfinite(capacity) and capacity > 0 else self.profile.capacity_wh
+
     def set_controls(self, enabled):
         enabled = enabled and self.profile.controls and not self.encrypted and not self.paused and not self.handoff_pending and not self.demo
         for field, button in self.switches.items():
@@ -492,6 +556,7 @@ class Panel(QWidget):
             button.setText(text)
             button.setChecked(value is True)
             button.setEnabled(enabled and not self.busy and type(value) is bool)
+            button.setVisible(self.profile.controls and not self.encrypted)
             if self.details:
                 detail_button = self.detail_switches[field]
                 detail_button.setText(text)
@@ -523,6 +588,14 @@ class Panel(QWidget):
     def update_reading(self, data):
         if self.paused or self.handoff_pending:
             return
+        if self.pending_station is not None:
+            self.save('model', self.profile.model)
+            self.save('address', self.pending_station['address'])
+            self.save('encrypted', self.encrypted)
+            self.settings.sync()
+            self.pending_station = None
+            if self.picker and self.picker.connecting:
+                self.picker.connected()
         self.data = data
         self.last_update = time.monotonic()
         self.stale = False
@@ -531,12 +604,11 @@ class Panel(QWidget):
         soc = data['total_battery_percent']
         hours = self.runtime_estimator.update(soc, power_in, power_out, self.last_update)
         self.cluster.runtime_text = format_runtime(hours)
-        self.cluster.runtime_caption = 'ДО РОЗРЯДУ' if hours is not None else 'Є ВХІД' if power_in and power_in > 0 else 'БЕЗ НАВАНТАЖЕННЯ' if power_out == 0 else 'НЕМАЄ ОЦІНКИ'
         average = self.runtime_estimator.average_w
-        self.cluster.setToolTip('Шкала 0–2 кВт.\n' + (
+        self.cluster.setToolTip((
             f'Орієнтовно за середнім навантаженням {average:.0f} Вт за останні 20 с.\n'
             'Час залежить від навантаження, температури та стану батареї.'
-            if hours is not None else 'Для оцінки часу потрібне навантаження без вхідного живлення.'))
+            if hours is not None else 'Для оцінки потрібні ємність батареї, вхідна й вихідна потужність.'))
         self.cluster.set_data(soc, power_in, power_out)
         self.history.add(self.last_update, power_in, power_out)
         self.connection_dot.setStyleSheet(f'color: {GREEN}; font-size: 10px;')
@@ -556,7 +628,7 @@ class Panel(QWidget):
         if self.demo or self.paused or self.handoff_pending or not self.last_update:
             return
         age = int(time.monotonic() - self.last_update)
-        if age > (45 if self.encrypted else 6):
+        if not self.stale and age > (45 if self.encrypted else 6):
             self.mark_stale()
             self.set_status(f'Зв’язок втрачено · даним {age} с')
 
@@ -578,8 +650,6 @@ class Panel(QWidget):
         if self.handoff_pending:
             self.handoff_pending = False
             self.paused = self.worker.paused
-        if 'scanner' in message.lower() or 'bluetooth turned on' in message.lower():
-            message = 'Увімкни Bluetooth у Windows або підключи адаптер.'
         self.mark_stale()
         self.set_status(message)
 
@@ -680,7 +750,12 @@ def main():
     parser.add_argument('--capture-count', type=int, default=1, help=argparse.SUPPRESS)
     parser.add_argument('--keep-running', action='store_true', help=argparse.SUPPRESS)
     args = parser.parse_args()
+    if sys.platform == 'win32':
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('VitTools.BluettiWidget')
     app = QApplication(sys.argv)
+    app.setApplicationName('BluettiWidget')
+    app.setWindowIcon(QIcon(str(APP_ICON)))
     app.setQuitOnLastWindowClosed(False)
     app.setStyleSheet(STYLE)
     rendering = bool(args.render or args.render_details)

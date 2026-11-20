@@ -3,22 +3,39 @@ import math
 import time
 from collections import deque
 from PySide6.QtCore import Qt, QRectF, QTimer
-from PySide6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen, QRadialGradient
+from PySide6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import QLabel, QWidget
 TEXT = '#f1f5fa'
 MUTED = '#91a0b4'
 INPUT = '#76d9ed'
 OUTPUT = '#ffb57d'
 GREEN = '#8ae0b4'
-STYLE_ACCENT = '''
-QWidget#shell { background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #192b3a,stop:1 #0b121b); border:1px solid #426078; border-radius:18px; }
+STYLE = '''
+QWidget { color:#f1f5fa; font-family:'Segoe UI'; font-size:12px; }
+QDialog { background:#121923; }
+QLabel { background:transparent; border:none; }
+QLabel#muted { color:#91a0b4; }
+QLabel#eyebrow { color:#91a0b4; font-size:10px; font-weight:600; letter-spacing:1px; }
+QPushButton { background:#202c3c; border:1px solid #3a495e; border-radius:8px; padding:7px 10px; font-weight:600; }
+QPushButton:hover { background:#2c3c50; border-color:#6a809b; }
+QPushButton:pressed { background:#172230; }
+QPushButton:disabled { color:#7c899b; border-color:#334050; background:#19222e; }
+QPushButton#quiet { background:transparent; border:none; padding:2px 5px; color:#b3c0d0; }
+QPushButton#quiet:hover { background:#2c3c50; color:white; }
+QPushButton#primary { background:#82d8c8; color:#102420; border:none; }
+QPushButton#primary:hover { background:#a3eadc; }
+QPushButton#primary:disabled { background:#27373d; color:#94a5ac; }
+QComboBox { background:#202c3c; border:1px solid #3a495e; border-radius:7px; padding:7px; }
+QComboBox QAbstractItemView { background:#202c3c; selection-background-color:#35516b; }
+QMenu { background:#192330; border:1px solid #3a495e; padding:6px; }
+QMenu::item { padding:8px 18px; }
+QMenu::item:selected { background:#30445b; }
+QToolTip { background:#253346; color:#f1f5fa; border:1px solid #51657f; padding:5px; }
+QWidget#shell { background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #182532,stop:1 #101820); border:1px solid #344355; border-radius:18px; }
 QPushButton:checked { background:#153d36; color:#b4f5d7; border-color:#478e7d; }
 QLineEdit,QPlainTextEdit { background:#0b121b; color:#f1f5fa; border:1px solid #3a495e; border-radius:7px; padding:8px; }
 QLineEdit:focus,QPlainTextEdit:focus { border-color:#76d9ed; }
 '''
-STYLE = "\nQWidget { color:#f1f5fa; font-family:'Segoe UI'; font-size:12px; }\nQWidget#shell { background:#121923; border:1px solid #344152; border-radius:17px; }\nQDialog { background:#121923; }\nQLabel { background:transparent; border:none; }\nQLabel#muted { color:#91a0b4; }\nQLabel#eyebrow { color:#91a0b4; font-size:10px; font-weight:600; letter-spacing:1px; }\nQPushButton { background:#202c3c; border:1px solid #3a495e; border-radius:8px; padding:7px 10px; font-weight:600; }\nQPushButton:hover { background:#2c3c50; border-color:#6a809b; }\nQPushButton:pressed { background:#172230; }\nQPushButton:checked { background:#1c3c34; color:#a3edc5; border-color:#477b66; }\nQPushButton:disabled { color:#7c899b; border-color:#334050; background:#19222e; }\nQPushButton#quiet { background:transparent; border:none; padding:2px 5px; color:#b3c0d0; }\nQPushButton#quiet:hover { background:#2c3c50; color:white; }\nQPushButton#primary { background:#82d8c8; color:#102420; border:none; }\nQPushButton#primary:hover { background:#a3eadc; }\nQComboBox { background:#202c3c; border:1px solid #3a495e; border-radius:7px; padding:7px; }\nQComboBox QAbstractItemView { background:#202c3c; selection-background-color:#35516b; }\nQMenu { background:#192330; border:1px solid #3a495e; padding:6px; }\nQMenu::item { padding:8px 18px; }\nQMenu::item:selected { background:#30445b; }\nQToolTip { background:#253346; color:#f1f5fa; border:1px solid #51657f; padding:5px; }\n"
-
-STYLE += STYLE_ACCENT
 
 def label(text, name='', size=None):
     item = QLabel(text)
@@ -43,9 +60,7 @@ class InstrumentCluster(QWidget):
         self.soc = None
         self.stale = True
         self.runtime_text = '—'
-        self.runtime_caption = 'ДО РОЗРЯДУ'
         self.setAccessibleName('Заряд станції та вхідна і вихідна потужність')
-        self.setToolTip('Шкала 0–2 кВт. Цифри показують повне значення, зокрема понад шкалу.')
         self.animation = QTimer(self)
         self.animation.setInterval(16)
         self.animation.setTimerType(Qt.TimerType.PreciseTimer)
@@ -83,65 +98,43 @@ class InstrumentCluster(QWidget):
     def paintEvent(self, event):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        p.scale(self.width() / 338, self.height() / 132)
-        for i, (cx, title, color) in enumerate([(58, 'ВХІД', INPUT), (280, 'ВИХІД', OUTPUT)]):
-            color = MUTED if self.stale else color
-            cy, radius = (51, 46)
-            p.setPen(Qt.PenStyle.NoPen)
-            face = QRadialGradient(cx,cy,54)
-            face.setColorAt(0,QColor('#1a2b3c'))
-            face.setColorAt(1,QColor('#09111b'))
-            p.setBrush(face)
-            p.drawEllipse(QRectF(cx - 51, cy - 51, 102, 102))
-            arc = QRectF(cx - radius, cy - radius, 2 * radius, 2 * radius)
-            p.setPen(QPen(QColor('#2e3c4f'), 3))
-            p.drawArc(arc, 210 * 16, -240 * 16)
-            ratio = min(max(self.values[i] / 2000, 0), 1)
-            p.setPen(QPen(QColor(color), 3, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
-            p.drawArc(arc, 210 * 16, -int(240 * 16 * ratio))
-            for tick in range(13):
-                angle = math.radians(150 + tick * 20)
-                major = tick % 3 == 0
-                r = radius - (9 if major else 5)
-                p.setPen(QPen(QColor('#8797ac' if major else '#4d5e75'), 1))
-                p.drawLine(int(cx + math.cos(angle) * r), int(cy + math.sin(angle) * r), int(cx + math.cos(angle) * (radius - 2)), int(cy + math.sin(angle) * (radius - 2)))
-            font(p, 10)
-            p.setPen(QColor(MUTED))
-            for text, angle in [('0', 150), ('1', 270), ('2', 390)]:
-                a = math.radians(angle)
-                x, y = (cx + math.cos(a) * 29, cy + math.sin(a) * 29)
-                p.drawText(QRectF(x - 7, y - 7, 14, 14), Qt.AlignmentFlag.AlignCenter, text)
-            a = math.radians(150 + 240 * ratio)
-            p.setPen(QPen(QColor(color), 2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
-            p.drawLine(cx, cy, int(cx + math.cos(a) * 34), int(cy + math.sin(a) * 34))
-            p.setBrush(QColor(color))
-            p.drawEllipse(QRectF(cx - 3, cy - 3, 6, 6))
-            font(p, 10)
-            p.setPen(QColor(MUTED))
-            p.drawText(QRectF(cx - 20, 63, 40, 14), Qt.AlignmentFlag.AlignCenter, 'кВт')
-            p.setPen(QColor(MUTED if self.stale else TEXT))
-            font(p, 24, True)
-            value = '—' if self.targets[i] is None else f'{self.values[i]:.0f}'
-            p.drawText(QRectF(cx - 55, 78, 110, 30), Qt.AlignmentFlag.AlignCenter, value)
-            font(p, 11, True)
-            p.setPen(QColor(color))
-            p.drawText(QRectF(cx - 58, 111, 116, 17), Qt.AlignmentFlag.AlignCenter, title + ' · Вт')
-        battery = QColor(MUTED if self.stale else GREEN if self.soc is None or self.soc > 20 else '#ff9b84')
-        p.setPen(QPen(battery, 1))
-        p.setBrush(Qt.BrushStyle.NoBrush)
-        p.drawRoundedRect(QRectF(155, 16, 27, 10), 2, 2)
-        p.fillRect(QRectF(183, 19, 2, 4), battery)
-        if self.soc is not None:
-            p.fillRect(QRectF(158, 19, 21 * self.soc / 100, 4), battery)
+        width = self.width()
+        height = self.height()
+        battery = QColor(MUTED if self.stale else '#ff9b84' if self.soc is not None and self.soc <= 20 else GREEN)
         p.setPen(battery)
-        font(p, 35, True)
-        p.drawText(QRectF(116, 35, 106, 46), Qt.AlignmentFlag.AlignCenter, '—' if self.soc is None else f'{self.soc}%')
+        font(p, min(40, int(height * .34)), True)
+        soc = '—' if self.soc is None else f'{self.soc}%'
+        p.drawText(QRectF(3, 0, width * .47, height * .49),
+                   Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, soc)
+
+        bar = QRectF(4, height * .51, width - 8, 5)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QColor('#344355'))
+        p.drawRoundedRect(bar, 2.5, 2.5)
+        if self.soc:
+            bar.setWidth(bar.width() * self.soc / 100)
+            p.setBrush(battery)
+            p.drawRoundedRect(bar, 2.5, 2.5)
+
+        font(p, 12)
         p.setPen(QColor(MUTED))
-        font(p, 13, True)
-        p.drawText(QRectF(110, 83, 118, 22), Qt.AlignmentFlag.AlignCenter, self.runtime_text)
-        font(p, 10)
-        p.drawText(QRectF(108, 107, 122, 17), Qt.AlignmentFlag.AlignCenter, 'останні дані' if self.stale and self.soc is not None else self.runtime_caption)
+        hint = ('Останні дані' if self.stale and self.soc is not None else
+                f'До розряду {self.runtime_text}' if self.runtime_text != '—' else 'Заряд батареї')
+        p.drawText(QRectF(width * .43, 0, width * .57 - 4, height * .49),
+                   Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, hint)
+        for index, (title, color) in enumerate((('Вхід', INPUT), ('Вихід', OUTPUT))):
+            left = index * width / 2 + 4
+            p.setPen(QColor(MUTED if self.stale else color))
+            font(p, 11, True)
+            p.drawText(QRectF(left, height * .64, width / 2 - 8, height * .14),
+                       Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, title)
+            p.setPen(QColor(MUTED if self.stale else TEXT))
+            font(p, min(22, int(height * .2)), True)
+            value = '—' if self.targets[index] is None else f'{self.values[index]:.0f} Вт'
+            p.drawText(QRectF(left, height * .78, width / 2 - 8, height * .22),
+                       Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, value)
         p.end()
+
 
 class PowerHistory(QWidget):
 

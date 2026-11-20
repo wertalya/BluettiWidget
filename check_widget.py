@@ -8,10 +8,11 @@ from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+from bleak.exc import BleakError
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QCoreApplication, QEvent
 from bluetti_bt_lib.enums import ChargingMode
-from powerlink import BluetoothWorker, LiveSession, normalize
+from powerlink import BluetoothWorker, InvalidFrame, LiveSession, RegisterRejected, normalize
 from bluetti_bt_lib.registers import ReadableRegisters
 from bluetti_bt_lib.registers.DeviceRegister import modbus_crc
 from widget import Panel, STYLE, SIZES, describe_state
@@ -158,6 +159,69 @@ class Checks(unittest.TestCase):
                 await task
             self.assertTrue(disposed.is_set())
             self.assertIsNone(worker.live)
+        asyncio.run(exercise())
+
+    def test_picker_persists_a_station_only_after_telemetry(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            panel = Panel(start_worker=False, settings_path=Path(tmp) / 'settings.ini')
+            panel.open_picker()
+            self.assertEqual(panel.worker.commands.get_nowait(), ('scan', None))
+            station = {'name': 'EB3A123', 'model': 'EB3A', 'address': 'test', 'encrypted': False}
+            panel.picker.found([station])
+            panel.picker.choose()
+            self.assertEqual(panel.worker.commands.get_nowait(), ('select', station))
+            panel.on_selected(station)
+            self.assertIsNone(panel.settings.value('address'))
+            self.assertTrue(panel.picker.isVisible())
+            panel.update_reading({'total_battery_percent': 42})
+            self.assertEqual(panel.settings.value('address'), 'test')
+            self.assertFalse(panel.picker.isVisible())
+            self.assertEqual(panel.cluster.runtime_text, '—')
+            self.assertFalse(panel.windowIcon().isNull())
+            self.dispose(panel)
+
+    def test_new_selection_uses_scan_device_without_a_second_scan(self):
+        async def exercise():
+            worker = BluetoothWorker()
+            worker.address = 'TEST'
+            device = type('Device', (), {'address': 'test'})()
+            worker.cache_scan({'test': (device, None)})
+            with patch('powerlink.BleakScanner.discover', AsyncMock()) as scan:
+                self.assertIs(await worker.find_device(), device)
+                scan.assert_not_awaited()
+        asyncio.run(exercise())
+
+    def test_winrt_notification_failure_refreshes_services(self):
+        async def exercise():
+            worker = BluetoothWorker()
+            station = object()
+            session = object()
+            with patch('powerlink.sys.platform', 'win32'), \
+                 patch.object(worker, 'find_device', AsyncMock(return_value=station)), \
+                 patch.object(worker, 'disconnect', AsyncMock(return_value=True)), \
+                 patch.object(worker, 'open_live', AsyncMock(side_effect=[
+                     BleakError('disconnected'), session, session,
+                 ])) as connect:
+                self.assertIs(await worker.ensure_live(), session)
+                self.assertTrue(worker.prefer_uncached)
+                self.assertIs(await worker.ensure_live(), session)
+                self.assertEqual([call.args for call in connect.await_args_list],
+                                 [(station, False), (station, True), (station, True)])
+        asyncio.run(exercise())
+
+    def test_optional_register_rejection_and_corrupt_frame_recovery(self):
+        async def exercise():
+            worker = BluetoothWorker()
+            session = LiveSession(AsyncMock())
+            with patch.object(session, 'request', AsyncMock(side_effect=[
+                InvalidFrame(), b'\x00\x32', RegisterRejected(), b'\x00\x33',
+            ])) as request:
+                plan = ((102, 1), (140, 1))
+                self.assertEqual(normalize(await session.read(worker.device, plan)),
+                                 {'total_battery_percent': 50})
+                self.assertEqual(normalize(await session.read(worker.device, plan)),
+                                 {'total_battery_percent': 51})
+                self.assertEqual(request.await_count, 4)
         asyncio.run(exercise())
 
     def test_normalization_rejects_bad_soc(self):

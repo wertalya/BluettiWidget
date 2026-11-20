@@ -8,9 +8,20 @@ class ModelTests(unittest.TestCase):
     def test_detection_is_explicit_and_longest_model_wins(self):
         self.assertEqual(detect_profile('AC180P12345678').model,'AC180P')
         self.assertEqual(detect_profile('AC18012345678').model,'AC180')
-        for name in ('AC180T1234','AC180P-UNKNOWN','AC200L123','SomeOtherStation'):
+        for name in ('AC180T1234','AC180P-UNKNOWN','AC200PL123','SomeOtherStation'):
             self.assertIsNone(detect_profile(name))
         with self.assertRaises(ValueError): get_profile('UNKNOWN')
+
+    def test_profiles_follow_their_own_register_layout(self):
+        for name in ('AC200L', 'EB3A'):
+            profile = detect_profile(name + '1234')
+            device = profile.device_factory()
+            self.assertEqual(profile.read_plan(device), ((43, 1), (36, 4)))
+            self.assertFalse(profile.controls)
+            self.assertIsNone(profile.capacity_wh)
+        profile = get_profile('AC2A')
+        self.assertEqual(profile.read_plan(profile.device_factory()),
+                         ((102, 1), (140, 1), (142, 1), (144, 1), (146, 1)))
 
     def test_common_register_map_matches_upstream_models(self):
         for model in ('AC180','AC180P'):

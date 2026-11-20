@@ -14,7 +14,7 @@ a.binaries = [item for item in a.binaries if item[0].replace('\\\\', '/').lower(
 pyz = PYZ(a.pure)
 exe = EXE(pyz, a.scripts, a.binaries, a.datas, [], name='BluettiWidget',
           debug=False, bootloader_ignore_signals=False, strip=False,
-          upx=False, console=False, disable_windowed_traceback=False)
+          upx=False, console=False, icon='assets/bluetti-widget.ico', disable_windowed_traceback=False)
 '''
 portable_spec = root / 'Portable.spec'
 portable_spec.write_text(analysis + tail, encoding='utf-8')

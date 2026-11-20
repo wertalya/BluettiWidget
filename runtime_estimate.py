@@ -18,6 +18,8 @@ def runtime_hours(soc, load_w, capacity_wh=CAPACITY_WH):
         return None
     if type(load_w) not in (int, float) or not math.isfinite(load_w) or load_w <= 0:
         return None
+    if type(capacity_wh) not in (int, float) or not math.isfinite(capacity_wh) or capacity_wh <= 0:
+        return None
     return capacity_wh * soc / 100 * DEPTH_OF_DISCHARGE * EFFICIENCY / (load_w + SELF_CONSUMPTION_W)
 
 
@@ -48,7 +50,7 @@ class RuntimeEstimator:
 
     def update(self, soc, input_w, output_w, now):
         # With external input/bypass, output power isn't battery drain.
-        if type(input_w) not in (int, float) or not math.isfinite(input_w) or input_w != 0 or runtime_hours(soc, output_w) is None:
+        if type(input_w) not in (int, float) or not math.isfinite(input_w) or input_w != 0 or runtime_hours(soc, output_w, self.capacity_wh) is None:
             self.clear()
             return None
         if self.samples and now - self.samples[-1][0] > 6:
