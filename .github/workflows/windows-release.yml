@@ -1,0 +1,45 @@
+name: Publish Windows preview
+on:
+  push:
+    branches: [main]
+    paths: ['.github/windows-preview.json']
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: write
+concurrency:
+  group: windows-preview-release
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish the tested installer
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          manifest=.github/windows-preview.json
+          tag=$(jq -er '.tag' "$manifest")
+          source=$(jq -er '.source_commit' "$manifest")
+          build=$(jq -er '.build_run' "$manifest")
+          gh run view "$build" --json conclusion,headSha,headBranch,event,workflowName |
+            jq -e --arg source "$source" '
+              .conclusion == "success" and .headSha == $source and
+              .headBranch == "main" and .event == "push" and
+              .workflowName == "Windows checks and preview build"
+            ' >/dev/null
+          asset=BluettiWidget-Setup.exe
+          if gh release view "$tag" --json assets >"$RUNNER_TEMP/windows-release.json" 2>/dev/null; then
+            jq -e --arg asset "$asset" '.assets | any(.name == $asset)' "$RUNNER_TEMP/windows-release.json" >/dev/null
+            exit 0
+          fi
+
+          gh run download "$build" --name BluettiWidget-Windows-setup --dir "$RUNNER_TEMP/windows-release"
+          setup="$RUNNER_TEMP/windows-release/$asset"
+          test -s "$setup"
+          jq -er '.notes[]' "$manifest" >"$RUNNER_TEMP/windows-release-notes.md"
+          gh release create "$tag" "$setup" --target "$source" --prerelease \
+            --title "BluettiWidget $tag" --notes-file "$RUNNER_TEMP/windows-release-notes.md"

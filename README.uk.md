@@ -6,16 +6,15 @@
 
 ## Завантаження для Windows 11
 
-Відкрий [збірки на GitHub](https://github.com/wertalya/BluettiWidget/actions/workflows/build.yml),
-обери останню успішну збірку й завантаж **BluettiWidget-Windows-setup**.
-Розпакуй архів і запусти `BluettiWidget-Setup.exe`. Інсталятор встановить
-віджет для поточного користувача Windows і додасть пункт у меню «Пуск».
-«Запускати BluettiWidget після входу у Windows» типово ввімкнено. Після входу
-віджет запускається у треї. Видалити програму та ярлики можна в
-**Параметри → Програми → Інстальовані програми**.
+[**Завантажити BluettiWidget-Setup.exe**](https://github.com/wertalya/BluettiWidget/releases/download/v0.4.0-preview/BluettiWidget-Setup.exe)
+· [Сторінка релізу](https://github.com/wertalya/BluettiWidget/releases/tag/v0.4.0-preview)
 
-Для запуску без встановлення є архів **BluettiWidget-Windows-preview**
-із файлом `portable/BluettiWidget.exe`. GitHub може попросити увійти в акаунт.
+Відкрий завантажений файл. Інсталятор додасть віджет у меню «Пуск» і
+типово налаштує запуск у треї після входу у Windows. Видалити програму
+можна в **Параметри → Програми → Інстальовані програми**.
+
+Версія без встановлення доступна в [GitHub Actions](https://github.com/wertalya/BluettiWidget/actions/workflows/build.yml)
+в архіві **BluettiWidget-Windows-preview**.
 
 ## Підтримувані моделі
 

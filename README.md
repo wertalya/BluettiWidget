@@ -6,17 +6,15 @@ and a 10-minute history. The UI is in Ukrainian. [Інструкція укра�
 
 ## Download for Windows 11
 
-Open [Windows build runs](https://github.com/wertalya/BluettiWidget/actions/workflows/build.yml)
-and download **BluettiWidget-Windows-setup** from the latest successful run.
-Extract the archive and run `BluettiWidget-Setup.exe`. Setup installs for the
-current Windows user and selects **Start BluettiWidget when I sign in** by
-default. It adds a Start menu shortcut. At sign-in the widget starts in the
-notification area. To remove the app and its shortcuts, use Windows
-**Settings → Apps → Installed apps**.
+[**Download BluettiWidget-Setup.exe**](https://github.com/wertalya/BluettiWidget/releases/download/v0.4.0-preview/BluettiWidget-Setup.exe)
+· [Release notes](https://github.com/wertalya/BluettiWidget/releases/tag/v0.4.0-preview)
 
-The **BluettiWidget-Windows-preview** artifact contains
-`portable/BluettiWidget.exe` for use without installation.
-GitHub may require sign-in to download either artifact.
+Run the downloaded installer. Setup installs for the current Windows user,
+adds a Start menu shortcut and enables startup in the notification area by default.
+Remove the app through **Settings → Apps → Installed apps**.
+
+The portable build is available from [GitHub Actions](https://github.com/wertalya/BluettiWidget/actions/workflows/build.yml)
+under **BluettiWidget-Windows-preview**.
 
 ## Compatibility
 
