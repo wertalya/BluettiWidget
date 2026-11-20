@@ -161,6 +161,34 @@ class Checks(unittest.TestCase):
             self.assertIsNone(worker.live)
         asyncio.run(exercise())
 
+    def test_tray_menu_reflects_connection_and_visibility(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            panel = Panel(start_worker=False, settings_path=Path(tmp) / 'settings.ini')
+            panel.tray.setContextMenu.assert_called_with(panel.menu)
+            panel.refresh_menu()
+            self.assertEqual(panel.menu_status.text(), 'Станцію ще не вибрано')
+            self.assertEqual(panel.visibility_action.text(), 'Показати віджет')
+            self.assertFalse(panel.retry_action.isVisible())
+
+            panel.on_selected({'model': 'AC180P', 'address': 'test'})
+            panel.show()
+            panel.refresh_menu()
+            self.assertTrue(panel.retry_action.isVisible())
+            self.assertEqual(panel.visibility_action.text(), 'Сховати віджет')
+            panel.retry_action.trigger()
+            self.assertEqual(panel.worker.commands.get_nowait(), ('read', None))
+
+            panel.update_reading(normalize(SAMPLE))
+            panel.refresh_menu()
+            self.assertIn('70%', panel.menu_title.text())
+            self.assertIn('Підключено', panel.menu_status.text())
+            self.assertFalse(panel.retry_action.isVisible())
+            panel.on_paused(True)
+            panel.refresh_menu()
+            self.assertIn('вільний для телефону', panel.menu_status.text())
+            self.assertEqual(panel.handoff_action.text(), 'Повернути з’єднання до ПК')
+            self.dispose(panel)
+
     def test_picker_persists_a_station_only_after_telemetry(self):
         with tempfile.TemporaryDirectory() as tmp:
             panel = Panel(start_worker=False, settings_path=Path(tmp) / 'settings.ini')

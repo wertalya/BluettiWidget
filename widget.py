@@ -9,7 +9,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QSettings, QTimer, QLockFile, QPoint
 from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPixmap, QActionGroup
 from PySide6.QtWidgets import (QApplication, QComboBox, QDialog, QGridLayout,
-    QHBoxLayout, QMenu, QMessageBox, QPushButton, QSizePolicy, QSystemTrayIcon, QVBoxLayout, QWidget)
+    QHBoxLayout, QMenu, QMessageBox, QPushButton, QSizePolicy, QSystemTrayIcon, QVBoxLayout, QWidget, QWidgetAction)
 from powerlink import BluetoothWorker
 from runtime_estimate import RuntimeEstimator, format_runtime
 from models import PROFILES, get_profile
@@ -175,6 +175,7 @@ class Panel(QWidget):
         saved_model = self.settings.value('model', 'AC180P')
         saved_address = self.settings.value('address', '') if saved_model in PROFILES else ''
         self.profile = PROFILES.get(saved_model, PROFILES['AC180P'])
+        self.has_station = bool(saved_address)
         self.setWindowTitle('BluettiWidget')
         self.setWindowIcon(QIcon(str(APP_ICON)))
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Window)
@@ -288,13 +289,28 @@ class Panel(QWidget):
 
     def make_menu(self):
         menu = QMenu(self)
-        menu.addAction('Показати / сховати', self.toggle_visible)
-        menu.addAction('Деталі та налаштування', self.open_details)
-        menu.addAction('Вибрати станцію…', self.open_picker)
-        menu.addAction('Написати автору: проблема або побажання',self.open_feedback)
+        header = QWidget(menu)
+        header.setObjectName('trayHeader')
+        summary = QVBoxLayout(header)
+        summary.setContentsMargins(12, 9, 12, 9)
+        summary.setSpacing(4)
+        self.menu_title = label('BLUETTI', 'trayTitle')
+        self.menu_status = label('', 'muted')
+        summary.addWidget(self.menu_title)
+        summary.addWidget(self.menu_status)
+        summary_action = QWidgetAction(menu)
+        summary_action.setDefaultWidget(header)
+        menu.addAction(summary_action)
+
+        choose_station = menu.addAction('Знайти станцію…', self.open_picker)
+        choose_station.setEnabled(not self.demo)
+        self.retry_action = menu.addAction('Спробувати підключитися зараз', self.retry_connection)
         self.handoff_action = menu.addAction('Звільнити Bluetooth для телефону', self.toggle_bluetooth)
         menu.addSeparator()
-        sizes = menu.addMenu('Розмір віджета')
+        menu.addAction('Деталі та історія', self.open_details)
+        self.visibility_action = menu.addAction('Сховати віджет', self.toggle_visible)
+        appearance = menu.addMenu('Вигляд і положення')
+        sizes = appearance.addMenu('Розмір')
         group = QActionGroup(sizes)
         self.size_actions = {}
         for name, dimensions in SIZES.items():
@@ -304,15 +320,15 @@ class Panel(QWidget):
             action.triggered.connect(lambda checked, n=name: self.apply_size(n))
             group.addAction(action)
             self.size_actions[name] = action
-        self.lock_action = menu.addAction('Закріпити позицію')
+        self.lock_action = appearance.addAction('Закріпити позицію')
         self.lock_action.setCheckable(True)
         self.lock_action.setChecked(self.position_locked)
         self.lock_action.toggled.connect(self.set_position_locked)
-        self.top_action = menu.addAction('Поверх інших вікон')
+        self.top_action = appearance.addAction('Поверх інших вікон')
         self.top_action.setCheckable(True)
         self.top_action.setChecked(self.always_on_top)
         self.top_action.toggled.connect(self.set_on_top)
-        opacity_menu = menu.addMenu('Непрозорість')
+        opacity_menu = appearance.addMenu('Непрозорість')
         opacity_group = QActionGroup(opacity_menu)
         for value in (100, 90, 80, 70):
             action = opacity_menu.addAction(f'{value}%')
@@ -320,10 +336,45 @@ class Panel(QWidget):
             action.setChecked(value == self.opacity)
             action.triggered.connect(lambda checked, v=value: self.set_opacity(v))
             opacity_group.addAction(action)
-        menu.addAction('Перемістити до правого краю', self.move_to_edge)
+        appearance.addAction('Перемістити до правого краю', self.move_to_edge)
         menu.addSeparator()
-        menu.addAction('Вийти', QApplication.instance().quit)
+        menu.addAction('Написати автору…', self.open_feedback)
+        menu.addAction('Закрити BluettiWidget', QApplication.instance().quit)
+        menu.aboutToShow.connect(self.refresh_menu)
         return menu
+
+    def refresh_menu(self):
+        soc = self.data.get('total_battery_percent')
+        title = f'BLUETTI  {self.profile.model}' if self.has_station or self.demo else 'BluettiWidget'
+        self.menu_title.setText(f'{title}  ·  {soc}%' if soc is not None else title)
+        fresh = self.fresh()
+        if self.demo:
+            status = 'Демонстраційний режим'
+        elif self.handoff_pending:
+            status = 'Змінюю стан Bluetooth…'
+        elif self.paused:
+            status = 'Bluetooth вільний для телефону'
+        elif fresh:
+            status = 'Підключено · живі показники'
+        elif not self.has_station:
+            status = 'Станцію ще не вибрано'
+        elif soc is not None:
+            status = 'Зв’язок втрачено · останній заряд'
+        else:
+            status = 'Очікую з’єднання зі станцією'
+        self.menu_status.setText(status)
+        self.retry_action.setVisible(self.can_retry_connection())
+        self.handoff_action.setEnabled(self.has_station and not self.demo and not self.handoff_pending and not self.busy)
+        self.visibility_action.setText('Сховати віджет' if self.isVisible() and not self.isMinimized() else 'Показати віджет')
+
+    def can_retry_connection(self):
+        return (self.has_station and not self.demo and not self.paused
+                and not self.handoff_pending and not self.busy and not self.fresh())
+
+    def retry_connection(self):
+        if self.can_retry_connection():
+            self.set_status('Підключаюся…')
+            self.worker.submit('read')
 
     def save(self, key, value):
         if not self.demo:
@@ -385,12 +436,13 @@ class Panel(QWidget):
             self.toggle_visible()
 
     def toggle_visible(self):
-        if self.isVisible():
+        if self.isVisible() and not self.isMinimized():
             self.hide()
         else:
-            self.show()
+            self.showNormal()
             self.keep_on_screen()
             self.raise_()
+            self.activateWindow()
 
     def set_compact(self, compact):
         if compact:
@@ -515,6 +567,7 @@ class Panel(QWidget):
     def on_selected(self, device):
         self.profile = get_profile(device.get('model','AC180P'))
         self.pending_station = device
+        self.has_station = True
         self.model_label.setText(self.profile.model)
         if self.details:
             self.detail_model.setText(self.profile.model)

@@ -27,9 +27,13 @@ QPushButton#primary:hover { background:#a3eadc; }
 QPushButton#primary:disabled { background:#27373d; color:#94a5ac; }
 QComboBox { background:#202c3c; border:1px solid #3a495e; border-radius:7px; padding:7px; }
 QComboBox QAbstractItemView { background:#202c3c; selection-background-color:#35516b; }
-QMenu { background:#192330; border:1px solid #3a495e; padding:6px; }
-QMenu::item { padding:8px 18px; }
-QMenu::item:selected { background:#30445b; }
+QMenu { background:#131e29; border:1px solid #354659; padding:6px; }
+QMenu::item { padding:7px 24px; border-radius:5px; }
+QMenu::item:selected { background:#273c50; }
+QMenu::item:disabled { color:#8492a3; }
+QMenu::separator { height:1px; background:#334254; margin:5px 7px; }
+QWidget#trayHeader { background:#1b2c3a; border-radius:7px; }
+QLabel#trayTitle { color:#9de6cd; font-size:14px; font-weight:600; }
 QToolTip { background:#253346; color:#f1f5fa; border:1px solid #51657f; padding:5px; }
 QWidget#shell { background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #182532,stop:1 #101820); border:1px solid #344355; border-radius:18px; }
 QPushButton:checked { background:#153d36; color:#b4f5d7; border-color:#478e7d; }
