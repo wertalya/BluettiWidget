@@ -1,0 +1,35 @@
+name: Windows checks and preview build
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          python -m venv .venv
+          .\.venv\Scripts\python.exe -m pip install -r requirements.txt pyinstaller==6.22.3
+      - name: Model tests
+        run: |
+          .\.venv\Scripts\python.exe test_models.py
+          .\.venv\Scripts\python.exe test_feedback.py
+      - name: Build and run offline checks
+        shell: pwsh
+        run: |
+          .\build.ps1
+          .\.venv\Scripts\python.exe build_portable.py
+          if (Test-Path portable/settings.ini) { throw 'Personal settings must not be in a release' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PowerCompanion-Windows-preview
+          path: |
+            portable/BluettiWidget.exe
+            LICENSE
+            THIRD_PARTY.md
+            README.md

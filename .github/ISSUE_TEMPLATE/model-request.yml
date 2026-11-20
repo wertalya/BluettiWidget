@@ -1,0 +1,17 @@
+name: BLUETTI model support
+description: Request support or report hardware results without private identifiers.
+body:
+  - type: input
+    id: model
+    attributes:
+      label: Model and firmware
+      description: Do not include the serial number or Bluetooth address.
+    validations:
+      required: true
+  - type: textarea
+    id: results
+    attributes:
+      label: Observations
+      description: Which readings match the phone app? Does reconnect work? Were controls actually tested?
+    validations:
+      required: true
