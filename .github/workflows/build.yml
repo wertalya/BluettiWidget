@@ -25,6 +25,32 @@ jobs:
           .\build.ps1
           .\.venv\Scripts\python.exe build_portable.py
           if (Test-Path portable/settings.ini) { throw 'Personal settings must not be in a release' }
+      - name: Build and verify installer
+        shell: pwsh
+        run: |
+          .\build_installer.ps1
+          $installDir = Join-Path $env:RUNNER_TEMP 'BluettiWidget-setup-smoke'
+          $startup = Join-Path ([Environment]::GetFolderPath('Startup')) 'BluettiWidget.lnk'
+          $setupArguments = @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/SP-', '/NORESTART', "/DIR=`"$installDir`"")
+          $setup = Start-Process .\dist\installer\BluettiWidget-Setup.exe -ArgumentList $setupArguments -Wait -PassThru
+          if ($setup.ExitCode -ne 0) { throw "Setup failed ($($setup.ExitCode))" }
+          try {
+            if (Test-Path (Join-Path $installDir 'settings.ini')) { throw 'Setup shipped a personal configuration' }
+            if (-not (Test-Path -LiteralPath $startup)) { throw 'Startup shortcut was not created by default' }
+            $link = (New-Object -ComObject WScript.Shell).CreateShortcut($startup)
+            if ($link.TargetPath -ne (Join-Path $installDir 'BluettiWidget.exe') -or $link.Arguments -ne '--start-in-tray') {
+              throw 'Unexpected startup shortcut'
+            }
+          } finally {
+            $uninstall = Start-Process (Join-Path $installDir 'unins000.exe') -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -Wait -PassThru
+            if ($uninstall.ExitCode -ne 0) { throw "Uninstall failed ($($uninstall.ExitCode))" }
+          }
+          if (Test-Path -LiteralPath $startup) { throw 'Uninstall left the startup shortcut behind' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BluettiWidget-Windows-setup
+          path: dist/installer/BluettiWidget-Setup.exe
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
           name: BluettiWidget-Windows-preview

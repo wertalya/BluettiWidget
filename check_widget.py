@@ -161,6 +161,19 @@ class Checks(unittest.TestCase):
             self.assertIsNone(worker.live)
         asyncio.run(exercise())
 
+    def test_start_in_tray_defers_picker_until_user_opens_widget(self):
+        with tempfile.TemporaryDirectory() as tmp, patch('widget.BluetoothWorker.start'):
+            panel = Panel(settings_path=Path(tmp) / 'settings.ini', auto_open_picker=False)
+            self.app.processEvents()
+            self.assertFalse(panel.isVisible())
+            self.assertIsNone(panel.picker)
+            self.assertTrue(panel.worker.commands.empty())
+            panel.toggle_visible()
+            self.assertTrue(panel.isVisible())
+            self.assertTrue(panel.picker.isVisible())
+            self.assertEqual(panel.worker.commands.get_nowait(), ('scan', None))
+            self.dispose(panel)
+
     def test_taskbar_visibility_defaults_to_tray_and_is_saved(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / 'settings.ini'

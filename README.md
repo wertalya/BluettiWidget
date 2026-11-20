@@ -6,10 +6,17 @@ and a 10-minute history. The UI is in Ukrainian. [Інструкція укра�
 
 ## Download for Windows 11
 
-Open [Windows build runs](https://github.com/wertalya/BluettiWidget/actions/workflows/build.yml),
-choose the latest successful run and download the `BluettiWidget-Windows-preview`
-artifact. GitHub may require sign-in to download Actions artifacts.
-Extract the archive and run `portable/BluettiWidget.exe`.
+Open [Windows build runs](https://github.com/wertalya/BluettiWidget/actions/workflows/build.yml)
+and download **BluettiWidget-Windows-setup** from the latest successful run.
+Extract the archive and run `BluettiWidget-Setup.exe`. Setup installs for the
+current Windows user and selects **Start BluettiWidget when I sign in** by
+default. It adds a Start menu shortcut. At sign-in the widget starts in the
+notification area. To remove the app and its shortcuts, use Windows
+**Settings → Apps → Installed apps**.
+
+The **BluettiWidget-Windows-preview** artifact contains
+`portable/BluettiWidget.exe` for use without installation.
+GitHub may require sign-in to download either artifact.
 
 ## Compatibility
 
@@ -44,6 +51,14 @@ app. The widget remembers the station when it receives a valid charge reading.
   keep a taskbar button while the widget is visible.
 - If telemetry stops, the widget marks the last readings and retries automatically.
 
+## Share a model profile
+
+Use **Запропонувати модель…** in the tray menu or open the
+[model report form](https://github.com/wertalya/BluettiWidget/issues/new?template=model-request.yml).
+Share the model, firmware, battery capacity and which readings work. Verified
+registers and field names are welcome. Submissions are reviewed before they
+become shared profiles. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Local settings
 
 Set battery capacity in [settings.example.ini](settings.example.ini) by copying
@@ -59,11 +74,13 @@ Keep settings, device identifiers and raw logs out of Git and public issues.
 .\.venv\Scripts\python.exe -m pip install pyinstaller==6.22.3
 .\build.ps1
 .\.venv\Scripts\python.exe build_portable.py
+.\build_installer.ps1
 ```
 
 Folder build: `dist/BluettiWidget/BluettiWidget.exe`.
 Single-file build: `portable/BluettiWidget.exe`.
-Both builds embed the Windows app icon. Demo readings are synthetic.
-GitHub Actions runs the offline tests and uploads the portable preview.
+The Inno Setup 6 compiler produces `dist/installer/BluettiWidget-Setup.exe`.
+Both application builds embed the Windows app icon. Demo readings are synthetic.
+GitHub Actions verifies setup and uploads the installer and portable preview.
 
 Project code is MIT. See [THIRD_PARTY.md](THIRD_PARTY.md) for dependency licenses.

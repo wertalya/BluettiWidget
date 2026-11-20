@@ -1,8 +1,12 @@
 # Contributing
 
-For a new model, open a model request with model name, firmware version,
+Open a [model report](https://github.com/wertalya/BluettiWidget/issues/new?template=model-request.yml)
+with the model name, firmware version,
 Windows version, adapter type, and which readings match the official app.
 Remove Bluetooth addresses, serial numbers and personal paths from evidence.
+For a capacity contribution, include the model key and capacity in Wh, plus a
+public reference where available. Share only the model setting from your
+configuration. Reports inform reviewed profile changes.
 
 Models with a charge field in the pinned BLE library receive a read-only
 profile automatically. Add an override in `models.py` when capacity, field

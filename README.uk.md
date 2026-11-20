@@ -7,8 +7,15 @@
 ## Завантаження для Windows 11
 
 Відкрий [збірки на GitHub](https://github.com/wertalya/BluettiWidget/actions/workflows/build.yml),
-обери останню успішну збірку й завантаж архів `BluettiWidget-Windows-preview`.
-Розпакуй і запусти `portable/BluettiWidget.exe`. GitHub може попросити увійти в акаунт.
+обери останню успішну збірку й завантаж **BluettiWidget-Windows-setup**.
+Розпакуй архів і запусти `BluettiWidget-Setup.exe`. Інсталятор встановить
+віджет для поточного користувача Windows і додасть пункт у меню «Пуск».
+«Запускати BluettiWidget після входу у Windows» типово ввімкнено. Після входу
+віджет запускається у треї. Видалити програму та ярлики можна в
+**Параметри → Програми → Інстальовані програми**.
+
+Для запуску без встановлення є архів **BluettiWidget-Windows-preview**
+із файлом `portable/BluettiWidget.exe`. GitHub може попросити увійти в акаунт.
 
 ## Підтримувані моделі
 
@@ -48,6 +55,16 @@ Bluetooth. Звідти можна знайти станцію, повторит
 `settings.ini` та `logs/` створюються поруч із застосунком. Bluetooth-адреса
 зберігається локально в налаштуваннях. До репозиторію додавай лише зразок.
 
+## Як запропонувати параметри своєї станції
+
+Правий клік по значку віджета → **Запропонувати модель…** відкриває
+[форму GitHub](https://github.com/wertalya/BluettiWidget/issues/new?template=model-request.yml).
+Вкажи модель, прошивку, ємність і що працює. За наявності додай
+перевірені назви полів або регістри. Достатньо параметрів моделі,
+наприклад `AC180=1152` у секції `[capacity_wh]`. Повний `settings.ini`,
+адресу Bluetooth, серійний номер та необроблені журнали залиш у себе.
+Після перевірки параметри можна додати до спільного профілю.
+
 ## Збірка
 
 ```powershell
@@ -55,7 +72,9 @@ Bluetooth. Звідти можна знайти станцію, повторит
 .\.venv\Scripts\python.exe -m pip install pyinstaller==6.22.3
 .\build.ps1
 .\.venv\Scripts\python.exe build_portable.py
+.\build_installer.ps1
 ```
 
+Інсталятор (потрібен Inno Setup 6) з’явиться в `dist/installer/BluettiWidget-Setup.exe`.
 Переносний застосунок з’явиться в `portable/BluettiWidget.exe`.
 `widget.py --demo` відкриває віджет із тестовими показниками без станції.

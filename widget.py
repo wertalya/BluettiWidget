@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QDialog, QGridLayout,
 from powerlink import BluetoothWorker
 from runtime_estimate import RuntimeEstimator, format_runtime
 from models import PROFILES, get_profile
-from feedback import FeedbackDialog, VERSION
+from feedback import FeedbackDialog, VERSION, open_model_report
 from views import STYLE, INPUT, OUTPUT, GREEN, MUTED, InstrumentCluster, PowerHistory, label
 
 APP_DIR = Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path(__file__).resolve().parent
@@ -150,7 +150,7 @@ class Picker(QDialog):
 
 
 class Panel(QWidget):
-    def __init__(self, demo=False, start_worker=True, settings_path=None):
+    def __init__(self, demo=False, start_worker=True, settings_path=None, auto_open_picker=True):
         super().__init__()
         self.demo = demo
         self.settings = QSettings(str(settings_path or APP_DIR / 'settings.ini'), QSettings.Format.IniFormat)
@@ -278,8 +278,8 @@ class Panel(QWidget):
                     'model':self.profile.model,
                     'encrypted': self.settings.value('encrypted', False, type=bool)})
                 self.set_status('Підключаюся…')
-            else:
-                QTimer.singleShot(0, self.open_picker)
+            elif auto_open_picker:
+                QTimer.singleShot(0, self, self.open_picker)
         if demo:
             self.update_reading({'total_battery_percent': 81, 'ac_input_power': 1456,
                 'dc_input_power': 0, 'ac_output_power': 329, 'dc_output_power': 12,
@@ -342,6 +342,7 @@ class Panel(QWidget):
             opacity_group.addAction(action)
         appearance.addAction('Перемістити до правого краю', self.move_to_edge)
         menu.addSeparator()
+        menu.addAction('Запропонувати модель…', open_model_report)
         menu.addAction('Написати автору…', self.open_feedback)
         menu.addAction('Закрити BluettiWidget', QApplication.instance().quit)
         menu.aboutToShow.connect(self.refresh_menu)
@@ -464,6 +465,8 @@ class Panel(QWidget):
             self.keep_on_screen()
             self.raise_()
             self.activateWindow()
+            if not self.has_station and self.picker is None:
+                self.open_picker()
 
     def set_compact(self, compact):
         if compact:
@@ -817,6 +820,7 @@ class Panel(QWidget):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--demo', action='store_true')
+    parser.add_argument('--start-in-tray', action='store_true', help='Start in the notification area')
     parser.add_argument('--render', type=Path)
     parser.add_argument('--render-details', type=Path)
     parser.add_argument('--size', choices=SIZES)
@@ -855,11 +859,14 @@ def main():
     log_dir.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(level=logging.WARNING, format='%(asctime)s %(levelname)s %(message)s', handlers=[RotatingFileHandler(
         log_dir / 'widget.log', maxBytes=500000, backupCount=2, encoding='utf-8')])
-    panel = Panel(demo=args.demo or rendering, start_worker=not rendering)
+    start_in_tray = args.start_in_tray and not (args.demo or rendering) and QSystemTrayIcon.isSystemTrayAvailable()
+    panel = Panel(demo=args.demo or rendering, start_worker=not rendering,
+                  auto_open_picker=not start_in_tray)
     if args.size:
         panel.apply_size(args.size)
     app.aboutToQuit.connect(panel.shutdown)
-    panel.show()
+    if not start_in_tray:
+        panel.show()
     if rendering:
         if args.render_details:
             panel.open_details()

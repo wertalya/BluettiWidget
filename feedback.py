@@ -5,8 +5,13 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (QDialog,QVBoxLayout,QHBoxLayout,QLabel,QComboBox,
     QLineEdit,QPlainTextEdit,QPushButton,QCheckBox)
 
-VERSION = '0.3.0-preview'
+VERSION = '0.4.0-preview'
 REPOSITORY = 'https://github.com/wertalya/BluettiWidget'
+
+
+def open_model_report():
+    QDesktopServices.openUrl(QUrl(REPOSITORY + '/issues/new?template=model-request.yml'))
+
 
 def issue_url(kind,title,description,model=None):
     body = '## '+('Проблема' if kind=='bug' else 'Побажання')+'\n\n'+description.strip()

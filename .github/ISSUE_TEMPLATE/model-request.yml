@@ -1,17 +1,35 @@
-name: BLUETTI model support
-description: Request support or report hardware results without private identifiers.
+name: BLUETTI model report
+description: Share model settings and hardware results for review.
+title: "[Model] "
 body:
+  - type: markdown
+    attributes:
+      value: Submit only model-specific settings. Leave out settings.ini, .env, Bluetooth addresses, serial numbers, tokens, and unfiltered logs.
   - type: input
     id: model
     attributes:
-      label: Model and firmware
-      description: Do not include the serial number or Bluetooth address.
+      label: BLUETTI model
+      placeholder: AC70
     validations:
       required: true
+  - type: input
+    id: firmware
+    attributes:
+      label: Firmware and BluettiWidget version
+  - type: input
+    id: capacity
+    attributes:
+      label: Installed battery capacity in Wh
+      description: Include expansion packs if fitted. Add a public source for the capacity if available.
   - type: textarea
     id: results
     attributes:
-      label: Observations
-      description: Which readings match the phone app? Does reconnect work? Were controls actually tested?
+      label: Hardware results
+      description: Tell us whether discovery, charge, input/output and reconnection work. Include model-only settings such as the capacity override.
     validations:
       required: true
+  - type: textarea
+    id: protocol
+    attributes:
+      label: Verified register or field mapping (optional)
+      description: Include field names, register ranges, units and a public reference when available.
