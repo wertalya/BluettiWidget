@@ -6,11 +6,11 @@ and a 10-minute history. The UI is in Ukrainian. [Інструкція укра�
 
 ## Download for Windows 11
 
-[**Download BluettiWidget-Setup.exe**](https://github.com/wertalya/BluettiWidget/releases/download/v0.4.0-preview/BluettiWidget-Setup.exe)
-· [Release notes](https://github.com/wertalya/BluettiWidget/releases/tag/v0.4.0-preview)
+[**Download BluettiWidget-Setup.exe**](https://github.com/wertalya/BluettiWidget/releases/download/v0.4.1-preview/BluettiWidget-Setup.exe)
+· [Release notes](https://github.com/wertalya/BluettiWidget/releases/tag/v0.4.1-preview)
 
 Run the downloaded installer. Setup installs for the current Windows user,
-adds a Start menu shortcut and enables startup in the notification area by default.
+adds a Start menu shortcut and shows the desktop widget on Windows sign-in by default.
 Remove the app through **Settings → Apps → Installed apps**.
 
 The portable build is available from [GitHub Actions](https://github.com/wertalya/BluettiWidget/actions/workflows/build.yml)
@@ -23,6 +23,25 @@ reconnection have been checked on an AC180P. The other 28 models are
 experimental and read-only. See the [full list](docs/compatibility.md) and
 [model setup](docs/compatibility.md#capacity-and-new-models). BLE works
 directly without an API key, cloud login or MQTT broker.
+
+## Updating
+
+Use **Перевірити оновлення…** (Check for updates) in the widget menu, then
+**Завантажити оновлення** to open the new installer download in your browser.
+Quit the widget from its tray menu and install over the existing version in
+the same directory. Do not uninstall first: `settings.ini` is preserved.
+Keep the startup task selected if you want automatic startup.
+Version 0.4.0 needs a one-time manual download using the link above.
+Portable users can replace the closed EXE and keep their existing settings file.
+
+Update checks are manual and send no station data or settings. Preview users
+receive newer preview or stable releases; stable users skip preview releases.
+The application never installs updates silently.
+
+The desktop widget now appears on Windows sign-in by default. Disable
+**Показувати віджет після входу у Windows** under appearance settings for
+tray-only startup. An explicit launch always opens the widget. The legacy
+`--start-in-tray` flag is still available; installed shortcuts use `--autostart`.
 
 ## Run from source
 

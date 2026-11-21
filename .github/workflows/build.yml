@@ -19,6 +19,7 @@ jobs:
         run: |
           .\.venv\Scripts\python.exe test_models.py
           .\.venv\Scripts\python.exe test_feedback.py
+          .\.venv\Scripts\python.exe test_updates.py
       - name: Build and run offline checks
         shell: pwsh
         run: |
@@ -38,9 +39,16 @@ jobs:
             if (Test-Path (Join-Path $installDir 'settings.ini')) { throw 'Setup shipped a personal configuration' }
             if (-not (Test-Path -LiteralPath $startup)) { throw 'Startup shortcut was not created by default' }
             $link = (New-Object -ComObject WScript.Shell).CreateShortcut($startup)
-            if ($link.TargetPath -ne (Join-Path $installDir 'BluettiWidget.exe') -or $link.Arguments -ne '--start-in-tray') {
+            if ($link.TargetPath -ne (Join-Path $installDir 'BluettiWidget.exe') -or $link.Arguments -ne '--autostart') {
               throw 'Unexpected startup shortcut'
             }
+            # Re-running Setup is the supported upgrade path and must preserve preferences.
+            $settings = Join-Path $installDir 'settings.ini'
+            $before = "[General]`nsize=S`nshow_on_startup=false`n[capacity_wh]`nAC180=1152`n"
+            [IO.File]::WriteAllText($settings, $before)
+            $upgrade = Start-Process .\dist\installer\BluettiWidget-Setup.exe -ArgumentList $setupArguments -Wait -PassThru
+            if ($upgrade.ExitCode -ne 0) { throw "Upgrade failed ($($upgrade.ExitCode))" }
+            if ([IO.File]::ReadAllText($settings) -cne $before) { throw 'Upgrade changed user settings' }
           } finally {
             $uninstall = Start-Process (Join-Path $installDir 'unins000.exe') -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -Wait -PassThru
             if ($uninstall.ExitCode -ne 0) { throw "Uninstall failed ($($uninstall.ExitCode))" }

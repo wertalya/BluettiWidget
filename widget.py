@@ -14,11 +14,18 @@ from powerlink import BluetoothWorker
 from runtime_estimate import RuntimeEstimator, format_runtime
 from models import PROFILES, get_profile
 from feedback import FeedbackDialog, VERSION, open_model_report
+from updates import UpdateDialog
 from views import STYLE, INPUT, OUTPUT, GREEN, MUTED, InstrumentCluster, PowerHistory, label
 
 APP_DIR = Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path(__file__).resolve().parent
 APP_ICON = Path(__file__).resolve().parent / 'assets' / 'bluetti-widget.ico'
 SIZES = {'S': (320, 204), 'M': (360, 220), 'L': (420, 246)}
+
+
+def startup_hidden(settings, *, autostart=False, start_in_tray=False, demo=False, rendering=False, tray_available=True):
+    if demo or rendering or not tray_available:
+        return False
+    return start_in_tray or (autostart and not settings.value('show_on_startup', True, type=bool))
 
 
 def total(data, *fields):
@@ -168,6 +175,7 @@ class Panel(QWidget):
         self.picker = None
         self.pending_station = None
         self.details = None
+        self.update_dialog = None
         self.size_name = self.settings.value('size', 'M')
         self.position_locked = self.settings.value('position_locked', False, type=bool)
         self.always_on_top = self.settings.value('always_on_top', False, type=bool)
@@ -341,7 +349,12 @@ class Panel(QWidget):
             action.triggered.connect(lambda checked, v=value: self.set_opacity(v))
             opacity_group.addAction(action)
         appearance.addAction('Перемістити до правого краю', self.move_to_edge)
+        self.startup_action = appearance.addAction('Показувати віджет після входу у Windows')
+        self.startup_action.setCheckable(True)
+        self.startup_action.setChecked(self.settings.value('show_on_startup', True, type=bool))
+        self.startup_action.toggled.connect(lambda checked: self.save('show_on_startup', checked))
         menu.addSeparator()
+        menu.addAction('Перевірити оновлення…', self.open_updates)
         menu.addAction('Запропонувати модель…', open_model_report)
         menu.addAction('Написати автору…', self.open_feedback)
         menu.addAction('Закрити BluettiWidget', QApplication.instance().quit)
@@ -449,6 +462,15 @@ class Panel(QWidget):
 
     def show_menu(self):
         self.menu.popup(self.menu_button.mapToGlobal(self.menu_button.rect().bottomLeft()))
+
+    def open_updates(self):
+        if self.update_dialog is None:
+            self.update_dialog = UpdateDialog(self)
+        elif not self.update_dialog.isVisible():
+            self.update_dialog.check()
+        self.update_dialog.show()
+        self.update_dialog.raise_()
+        self.update_dialog.activateWindow()
 
     def contextMenuEvent(self, event):
         self.menu.popup(event.globalPos())
@@ -813,6 +835,8 @@ class Panel(QWidget):
         self.cluster.animation.stop()
         self.worker.stop()
         self.tray.hide()
+        if self.update_dialog and self.update_dialog.worker.isRunning():
+            self.update_dialog.worker.wait()
         if self.worker.isRunning():
             self.worker.wait(35000)
 
@@ -820,6 +844,7 @@ class Panel(QWidget):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--demo', action='store_true')
+    parser.add_argument('--autostart', action='store_true', help='Use the saved startup visibility preference')
     parser.add_argument('--start-in-tray', action='store_true', help='Start in the notification area')
     parser.add_argument('--render', type=Path)
     parser.add_argument('--render-details', type=Path)
@@ -859,7 +884,10 @@ def main():
     log_dir.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(level=logging.WARNING, format='%(asctime)s %(levelname)s %(message)s', handlers=[RotatingFileHandler(
         log_dir / 'widget.log', maxBytes=500000, backupCount=2, encoding='utf-8')])
-    start_in_tray = args.start_in_tray and not (args.demo or rendering) and QSystemTrayIcon.isSystemTrayAvailable()
+    settings = QSettings(str(APP_DIR / 'settings.ini'), QSettings.Format.IniFormat)
+    start_in_tray = startup_hidden(settings, autostart=args.autostart,
+        start_in_tray=args.start_in_tray, demo=args.demo, rendering=rendering,
+        tray_available=QSystemTrayIcon.isSystemTrayAvailable())
     panel = Panel(demo=args.demo or rendering, start_worker=not rendering,
                   auto_open_picker=not start_in_tray)
     if args.size:

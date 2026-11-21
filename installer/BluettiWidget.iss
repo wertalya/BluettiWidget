@@ -1,5 +1,5 @@
 #define AppName "BluettiWidget"
-#define AppVersion "0.4.0"
+#define AppVersion "0.4.1"
 
 [Setup]
 AppId={{53EF3E31-279B-4B2E-90A9-D808FEE98F64}
@@ -51,7 +51,7 @@ Type: files; Name: "{userstartup}\BluettiWidget.lnk"
 
 [Icons]
 Name: "{userprograms}\BluettiWidget"; Filename: "{app}\BluettiWidget.exe"; WorkingDir: "{app}"
-Name: "{userstartup}\BluettiWidget"; Filename: "{app}\BluettiWidget.exe"; Parameters: "--start-in-tray"; WorkingDir: "{app}"; Tasks: startup
+Name: "{userstartup}\BluettiWidget"; Filename: "{app}\BluettiWidget.exe"; Parameters: "--autostart"; WorkingDir: "{app}"; Tasks: startup
 
 [Run]
 Filename: "{app}\BluettiWidget.exe"; Description: "{cm:LaunchWidget}"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent

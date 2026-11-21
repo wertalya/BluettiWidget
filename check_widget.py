@@ -15,7 +15,7 @@ from bluetti_bt_lib.enums import ChargingMode
 from powerlink import BluetoothWorker, InvalidFrame, LiveSession, RegisterRejected, normalize
 from bluetti_bt_lib.registers import ReadableRegisters
 from bluetti_bt_lib.registers.DeviceRegister import modbus_crc
-from widget import Panel, STYLE, SIZES, describe_state
+from widget import Panel, STYLE, SIZES, describe_state, startup_hidden
 from runtime_estimate import RuntimeEstimator, runtime_hours, format_runtime
 
 
@@ -172,6 +172,26 @@ class Checks(unittest.TestCase):
             self.assertTrue(panel.isVisible())
             self.assertTrue(panel.picker.isVisible())
             self.assertEqual(panel.worker.commands.get_nowait(), ('scan', None))
+            self.dispose(panel)
+
+    def test_autostart_shows_widget_by_default_and_respects_saved_preference(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'settings.ini'
+            panel = Panel(start_worker=False, settings_path=path)
+            self.assertFalse(startup_hidden(panel.settings, autostart=True))
+            panel.startup_action.setChecked(False)
+            panel.settings.sync()
+            self.dispose(panel)
+            panel = Panel(start_worker=False, settings_path=path)
+            self.assertFalse(panel.startup_action.isChecked())
+            self.assertTrue(startup_hidden(panel.settings, autostart=True))
+            self.assertFalse(startup_hidden(panel.settings))  # Explicit launch always opens.
+            self.assertFalse(startup_hidden(panel.settings, autostart=True, tray_available=False))
+            self.assertFalse(startup_hidden(panel.settings, start_in_tray=True, demo=True))
+            self.assertFalse(startup_hidden(panel.settings, start_in_tray=True, rendering=True))
+            panel.startup_action.setChecked(True)
+            self.assertFalse(startup_hidden(panel.settings, autostart=True))
+            self.assertTrue(startup_hidden(panel.settings, start_in_tray=True))
             self.dispose(panel)
 
     def test_taskbar_visibility_defaults_to_tray_and_is_saved(self):
