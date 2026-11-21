@@ -1,11 +1,13 @@
 """Check public Windows releases without sending station data or installing code."""
 import json
 import re
+import math
+import time
 from dataclasses import dataclass
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
-from PySide6.QtCore import QThread, QUrl, Signal
+from PySide6.QtCore import QObject, QThread, QTimer, QUrl, Qt, Signal
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QDialog, QHBoxLayout, QPushButton, QVBoxLayout
 
@@ -13,6 +15,8 @@ from feedback import REPOSITORY, VERSION
 from views import label
 
 API_URL = 'https://api.github.com/repos/wertalya/BluettiWidget/releases?per_page=100'
+CHECK_INTERVAL_SECONDS = 6 * 60 * 60
+STARTUP_DELAY_SECONDS = 30
 
 
 def version_key(version):
@@ -79,6 +83,76 @@ class ReleaseCheck(QThread):
             self.failed.emit()
         else:
             self.checked.emit(result)
+
+
+class AutoUpdateMonitor(QObject):
+    """One background check per six hours, including across application restarts."""
+    available = Signal(object)
+    notify = Signal(object)
+
+    def __init__(self, settings, parent=None):
+        super().__init__(parent)
+        self.settings = settings
+        self.active = False
+        self.timer = QTimer(self)
+        self.timer.setTimerType(Qt.TimerType.PreciseTimer)
+        self.timer.setSingleShot(True)
+        self.timer.timeout.connect(self.check)
+        self.worker = ReleaseCheck(self)
+        self.worker.checked.connect(self.on_checked)
+        self.worker.finished.connect(self.schedule)
+
+    def enabled(self):
+        return self.settings.value('automatic_update_checks', True, type=bool)
+
+    def start(self):
+        self.active = True
+        self.schedule()
+
+    def set_enabled(self, enabled):
+        self.settings.setValue('automatic_update_checks', enabled)
+        self.settings.sync()
+        self.schedule()
+
+    def schedule(self):
+        self.timer.stop()
+        if not self.active or not self.enabled():
+            return
+        now = time.time()
+        try:
+            last = float(self.settings.value('last_automatic_update_check', 0))
+        except (ValueError, TypeError):
+            last = 0
+        if not math.isfinite(last) or last > now:
+            last = 0
+        delay = max(STARTUP_DELAY_SECONDS, CHECK_INTERVAL_SECONDS - (now - last))
+        self.timer.start(math.ceil(delay * 1000))
+
+    def check(self):
+        if not self.active or not self.enabled():
+            return
+        if self.worker.isRunning():
+            self.timer.start(60_000)
+            return
+        # Persist attempts too: being offline must not cause a request loop.
+        self.settings.setValue('last_automatic_update_check', time.time())
+        self.settings.sync()
+        self.worker.start()
+
+    def on_checked(self, release):
+        if not self.active or not self.enabled() or release is None:
+            return
+        self.available.emit(release)
+        if self.settings.value('last_notified_update', '') != release.version:
+            self.settings.setValue('last_notified_update', release.version)
+            self.settings.sync()
+            self.notify.emit(release)
+
+    def stop(self):
+        self.active = False
+        self.timer.stop()
+        if self.worker.isRunning():
+            self.worker.wait()
 
 
 class UpdateDialog(QDialog):

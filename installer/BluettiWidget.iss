@@ -1,5 +1,5 @@
 #define AppName "BluettiWidget"
-#define AppVersion "0.4.1"
+#define AppVersion "0.4.2"
 
 [Setup]
 AppId={{53EF3E31-279B-4B2E-90A9-D808FEE98F64}

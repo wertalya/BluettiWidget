@@ -5,7 +5,7 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (QDialog,QVBoxLayout,QHBoxLayout,QLabel,QComboBox,
     QLineEdit,QPlainTextEdit,QPushButton,QCheckBox)
 
-VERSION = '0.4.1-preview'
+VERSION = '0.4.2-preview'
 REPOSITORY = 'https://github.com/wertalya/BluettiWidget'
 
 

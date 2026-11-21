@@ -6,8 +6,8 @@ and a 10-minute history. The UI is in Ukrainian. [Інструкція укра�
 
 ## Download for Windows 11
 
-[**Download BluettiWidget-Setup.exe**](https://github.com/wertalya/BluettiWidget/releases/download/v0.4.1-preview/BluettiWidget-Setup.exe)
-· [Release notes](https://github.com/wertalya/BluettiWidget/releases/tag/v0.4.1-preview)
+[**Download BluettiWidget-Setup.exe**](https://github.com/wertalya/BluettiWidget/releases/download/v0.4.2-preview/BluettiWidget-Setup.exe)
+· [Release notes](https://github.com/wertalya/BluettiWidget/releases/tag/v0.4.2-preview)
 
 Run the downloaded installer. Setup installs for the current Windows user,
 adds a Start menu shortcut and shows the desktop widget on Windows sign-in by default.
@@ -34,7 +34,11 @@ Keep the startup task selected if you want automatic startup.
 Version 0.4.0 needs a one-time manual download using the link above.
 Portable users can replace the closed EXE and keep their existing settings file.
 
-Update checks are manual and send no station data or settings. Preview users
+The app checks automatically 30 seconds after launch, then every 6 hours. Recent
+checks are remembered across restarts. Each new version gets one tray notification;
+click it or use the update menu to download. Network failures stay silent and retry
+on the next scheduled check. Disable **Автоматично перевіряти оновлення** in the
+menu to opt out; manual checks remain available. Checks send no station data or settings. Preview users
 receive newer preview or stable releases; stable users skip preview releases.
 The application never installs updates silently.
 

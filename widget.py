@@ -14,7 +14,7 @@ from powerlink import BluetoothWorker
 from runtime_estimate import RuntimeEstimator, format_runtime
 from models import PROFILES, get_profile
 from feedback import FeedbackDialog, VERSION, open_model_report
-from updates import UpdateDialog
+from updates import AutoUpdateMonitor, UpdateDialog
 from views import STYLE, INPUT, OUTPUT, GREEN, MUTED, InstrumentCluster, PowerHistory, label
 
 APP_DIR = Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path(__file__).resolve().parent
@@ -161,6 +161,7 @@ class Panel(QWidget):
         super().__init__()
         self.demo = demo
         self.settings = QSettings(str(settings_path or APP_DIR / 'settings.ini'), QSettings.Format.IniFormat)
+        self.auto_updates = AutoUpdateMonitor(self.settings, self)
         self.worker = BluetoothWorker()
         self.data = {}
         self.last_update = 0
@@ -263,6 +264,9 @@ class Panel(QWidget):
         self.tray.setContextMenu(self.menu)
         self.tray.activated.connect(self.tray_clicked)
         self.tray.show()
+        self.auto_updates.available.connect(lambda release: self.update_action.setText(f'Оновлення {release.version} доступне…'))
+        self.auto_updates.notify.connect(self.notify_update)
+        self.tray.messageClicked.connect(self.open_updates)
         self.worker.reading.connect(self.update_reading)
         self.worker.failure.connect(self.failed)
         self.worker.retrying.connect(self.set_status)
@@ -280,6 +284,7 @@ class Panel(QWidget):
         self.setWindowOpacity(self.opacity / 100)
         self.restore_position()
         if start_worker and not demo:
+            self.auto_updates.start()
             self.worker.start()
             if saved_address:
                 self.worker.submit('select', {'address': saved_address,
@@ -354,7 +359,12 @@ class Panel(QWidget):
         self.startup_action.setChecked(self.settings.value('show_on_startup', True, type=bool))
         self.startup_action.toggled.connect(lambda checked: self.save('show_on_startup', checked))
         menu.addSeparator()
-        menu.addAction('Перевірити оновлення…', self.open_updates)
+        self.update_action = menu.addAction('Перевірити оновлення…', self.open_updates)
+        self.auto_update_action = menu.addAction('Автоматично перевіряти оновлення')
+        self.auto_update_action.setCheckable(True)
+        self.auto_update_action.setChecked(self.auto_updates.enabled())
+        self.auto_update_action.setEnabled(not self.demo)
+        self.auto_update_action.toggled.connect(self.auto_updates.set_enabled)
         menu.addAction('Запропонувати модель…', open_model_report)
         menu.addAction('Написати автору…', self.open_feedback)
         menu.addAction('Закрити BluettiWidget', QApplication.instance().quit)
@@ -471,6 +481,11 @@ class Panel(QWidget):
         self.update_dialog.show()
         self.update_dialog.raise_()
         self.update_dialog.activateWindow()
+
+    def notify_update(self, release):
+        self.tray.showMessage('Доступне оновлення BluettiWidget',
+            f'Версія {release.version}. Натисни, щоб переглянути та завантажити.',
+            QSystemTrayIcon.MessageIcon.Information, 10000)
 
     def contextMenuEvent(self, event):
         self.menu.popup(event.globalPos())
@@ -835,6 +850,7 @@ class Panel(QWidget):
         self.cluster.animation.stop()
         self.worker.stop()
         self.tray.hide()
+        self.auto_updates.stop()
         if self.update_dialog and self.update_dialog.worker.isRunning():
             self.update_dialog.worker.wait()
         if self.worker.isRunning():
