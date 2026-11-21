@@ -1,4 +1,4 @@
-name: Publish Windows preview
+name: Публікація тестової версії для Windows
 on:
   push:
     branches: [main]
@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Publish the tested installer
+      - name: Публікація перевіреного інсталятора
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -29,7 +29,7 @@ jobs:
             jq -e --arg source "$source" '
               .conclusion == "success" and .headSha == $source and
               .headBranch == "main" and .event == "push" and
-              .workflowName == "Windows checks and preview build"
+              .workflowName == "Перевірки та збірка для Windows"
             ' >/dev/null
           asset=BluettiWidget-Setup.exe
           if gh release view "$tag" --json assets >"$RUNNER_TEMP/windows-release.json" 2>/dev/null; then
@@ -42,4 +42,4 @@ jobs:
           test -s "$setup"
           jq -er '.notes[]' "$manifest" >"$RUNNER_TEMP/windows-release-notes.md"
           gh release create "$tag" "$setup" --target "$source" --prerelease \
-            --title "BluettiWidget $tag" --notes-file "$RUNNER_TEMP/windows-release-notes.md"
+            --title "BluettiWidget $tag — тестова версія" --notes-file "$RUNNER_TEMP/windows-release-notes.md"

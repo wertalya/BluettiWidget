@@ -10,10 +10,10 @@ if (-not $Compiler) {
         ) | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
     }
 }
-if (-not $Compiler) { throw 'Install Inno Setup 6 or pass the path to ISCC.exe via -Compiler.' }
+if (-not $Compiler) { throw 'Установіть Inno Setup 6 або вкажіть шлях до ISCC.exe параметром -Compiler.' }
 if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'dist\BluettiWidget\BluettiWidget.exe'))) {
-    throw 'Run build.ps1 before building the installer.'
+    throw 'Перед створенням інсталятора запустіть build.ps1.'
 }
 
 & $Compiler (Join-Path $PSScriptRoot 'installer\BluettiWidget.iss')
-if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed ($LASTEXITCODE)." }
+if ($LASTEXITCODE -ne 0) { throw "Помилка збірки Inno Setup ($LASTEXITCODE)." }

@@ -46,9 +46,9 @@ class UpdateChecks(unittest.TestCase):
 
     def test_request_does_not_include_settings_or_station_data(self):
         response = MagicMock()
-        response.__enter__.return_value.read.return_value = json.dumps([release('v0.4.3-preview')]).encode()
+        response.__enter__.return_value.read.return_value = json.dumps([release('v0.4.4-preview')]).encode()
         with patch('updates.urlopen', return_value=response) as fetch:
-            self.assertEqual(check_releases().version, '0.4.3-preview')
+            self.assertEqual(check_releases().version, '0.4.4-preview')
         request = fetch.call_args.args[0]
         self.assertIsNone(request.data)
         self.assertEqual(request.full_url, 'https://api.github.com/repos/wertalya/BluettiWidget/releases?per_page=100')

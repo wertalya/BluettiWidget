@@ -1,18 +1,18 @@
-name: Report a bug
-description: Report a Windows, Bluetooth or widget issue.
-title: "[Bug] "
+name: Повідомити про проблему
+description: Проблема з віджетом, Bluetooth або роботою у Windows.
+title: "[Проблема] "
 body:
   - type: input
     id: environment
     attributes:
-      label: Widget version, Windows version and BLUETTI model
-      description: Include the firmware version if available. Leave out Bluetooth addresses and serial numbers.
+      label: Версія віджета, Windows і модель BLUETTI
+      description: За можливості вкажіть прошивку. Не додавайте Bluetooth-адресу та серійний номер.
     validations:
       required: true
   - type: textarea
     id: steps
     attributes:
-      label: Steps to reproduce
-      description: Include what you expected and what happened.
+      label: Що сталося та як це повторити?
+      description: Опишіть свої дії, очікуваний результат і що відбулося натомість.
     validations:
       required: true

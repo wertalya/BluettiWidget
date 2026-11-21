@@ -1,55 +1,125 @@
 # BluettiWidget
 
-An unofficial Windows 11 desktop widget for BLUETTI power stations. See charge,
-input and output at a glance and open details for individual power readings
-and a 10-minute history. The UI is in Ukrainian. [Інструкція українською](README.uk.md).
+**Заряд станції та споживання електроенергії — просто на робочому столі.**
 
-## Download for Windows 11
+Невеликий українськомовний віджет для Windows 11 і зарядних станцій BLUETTI.
+Допомагає стежити за запасом енергії, навантаженням і приблизним часом роботи,
+зокрема під час відключень електроенергії. Підключається напряму через Bluetooth,
+без облікового запису BLUETTI чи хмарного сервісу.
 
-[**Download BluettiWidget-Setup.exe**](https://github.com/wertalya/BluettiWidget/releases/download/v0.4.2-preview/BluettiWidget-Setup.exe)
-· [Release notes](https://github.com/wertalya/BluettiWidget/releases/tag/v0.4.2-preview)
+## Завантаження та встановлення
 
-Run the downloaded installer. Setup installs for the current Windows user,
-adds a Start menu shortcut and shows the desktop widget on Windows sign-in by default.
-Remove the app through **Settings → Apps → Installed apps**.
+[**Завантажити для Windows 11**](https://github.com/wertalya/BluettiWidget/releases/download/v0.4.3-preview/BluettiWidget-Setup.exe)
+· [Що нового у версії 0.4.3](https://github.com/wertalya/BluettiWidget/releases/tag/v0.4.3-preview)
 
-The portable build is available from [GitHub Actions](https://github.com/wertalya/BluettiWidget/actions/workflows/build.yml)
-under **BluettiWidget-Windows-preview**.
+1. Завантажте та відкрийте **BluettiWidget-Setup.exe**.
+2. Пройдіть установлення українською мовою. Права адміністратора не потрібні.
+3. Залиште позначку **«Запускати BluettiWidget після входу у Windows»**, якщо хочете бачити віджет після ввімкнення комп’ютера.
+4. Увімкніть станцію та Bluetooth на комп’ютері. У вікні пошуку виберіть свою станцію й натисніть **«Підключити»**.
 
-## Compatibility
+Якщо станція вже підключена до телефона, закрийте це з’єднання в застосунку
+BLUETTI. Віджет запам’ятає станцію після отримання коректного показника заряду.
 
-The app recognizes **29 BLUETTI models** over Bluetooth LE. Monitoring and
-reconnection have been checked on an AC180P. The other 28 models are
-experimental and read-only. See the [full list](docs/compatibility.md) and
-[model setup](docs/compatibility.md#capacity-and-new-models). BLE works
-directly without an API key, cloud login or MQTT broker.
+Це **тестова версія без цифрового підпису**. Роботу моніторингу перевірено на
+AC180P; підтримка інших моделей поки експериментальна.
 
-## Updating
+## Що показує віджет
 
-Use **Перевірити оновлення…** (Check for updates) in the widget menu, then
-**Завантажити оновлення** to open the new installer download in your browser.
-Quit the widget from its tray menu and install over the existing version in
-the same directory. Do not uninstall first: `settings.ini` is preserved.
-Keep the startup task selected if you want automatic startup.
-Version 0.4.0 needs a one-time manual download using the link above.
-Portable users can replace the closed EXE and keep their existing settings file.
+- Заряд акумулятора у відсотках, також на значку біля годинника.
+- Вхідну потужність заряджання та вихідну потужність навантаження.
+- Орієнтовний час роботи від акумулятора.
+- Стан Bluetooth і повідомлення про втрату зв’язку.
+- Окремі показники та історію потужності за останні 10 хвилин у вікні деталей.
 
-The app checks automatically 30 seconds after launch, then every 6 hours. Recent
-checks are remembered across restarts. Each new version gets one tray notification;
-click it or use the update menu to download. Network failures stay silent and retry
-on the next scheduled check. Disable **Автоматично перевіряти оновлення** in the
-menu to opt out; manual checks remain available. Checks send no station data or settings. Preview users
-receive newer preview or stable releases; stable users skip preview releases.
-The application never installs updates silently.
+Оцінка часу залежить від навантаження й відомої ємності акумулятора. Під час
+надходження живлення, без навантаження або за відсутності актуальних даних
+вона не показується. Це приблизний розрахунок, а не прогноз системи керування
+акумулятором станції.
 
-The desktop widget now appears on Windows sign-in by default. Disable
-**Показувати віджет після входу у Windows** under appearance settings for
-tray-only startup. An explicit launch always opens the widget. The legacy
-`--start-in-tray` flag is still available; installed shortcuts use `--autostart`.
+## Як користуватися
 
-## Run from source
+| Елемент | Дія |
+| --- | --- |
+| **Станція** | Знайти станцію або вибрати іншу |
+| **↗** | Відкрити деталі, історію та налаштування |
+| **Телефон** | Звільнити Bluetooth для застосунку на телефоні |
+| **Повернути** | Відновити з’єднання з комп’ютером |
+| **···** або правий клік | Відкрити меню віджета |
+| **×** | Сховати віджет у трей — область біля годинника |
+| Натискання значка в треї | Показати або сховати віджет |
 
-Use Python 3.12 and a Bluetooth LE adapter.
+У меню **«Вигляд і положення»** доступні три розміри, прозорість, закріплення
+позиції та показ поверх інших вікон. Там само можна ввімкнути кнопку на панелі
+завдань або вимкнути **«Показувати віджет після входу у Windows»**, щоб запускати
+його лише в треї. Для повного виходу виберіть **«Закрити BluettiWidget»**.
+
+Після обриву Bluetooth віджет позначає останні показники як застарілі й
+намагається відновити з’єднання автоматично.
+
+## Оновлення програми
+
+Віджет сам перевіряє GitHub: перша перевірка — приблизно через 30 секунд після
+запуску, наступні — раз на 6 годин, поки програма працює. Час останньої спроби
+зберігається між перезапусками. Про кожну нову версію з’являється одне
+повідомлення біля годинника.
+
+Щоб оновити програму:
+
+1. Натисніть повідомлення або виберіть **«Перевірити оновлення…»** у меню.
+2. Натисніть **«Завантажити оновлення»** — браузер завантажить інсталятор із цього репозиторію.
+3. Закрийте віджет через пункт **«Закрити BluettiWidget»** у треї.
+4. Відкрийте інсталятор і встановіть нову версію **поверх наявної, у ту саму папку**.
+
+**Видаляти програму перед оновленням не потрібно.** Вибір станції, позиція,
+розмір та інші налаштування збережуться. Залиште позначку автозапуску
+в інсталяторі, якщо він потрібен.
+
+Фонові перевірки можна вимкнути пунктом **«Автоматично перевіряти оновлення»**.
+Без інтернету програма тихо повторить перевірку пізніше. Дані станції та
+налаштування під час перевірки не надсилаються. Завантаження й установлення
+підтверджує користувач.
+
+У версії 0.4.0 перевірки ще немає, у 0.4.1 вона ручна, а з 0.4.2 — автоматична.
+Тестові версії отримують новіші тестові та стабільні випуски; стабільні версії
+пропускають тестові.
+
+## Які станції підтримуються
+
+Розпізнаються **29 моделей BLUETTI**. Моніторинг і повторне підключення
+перевірено на фізичній **AC180P**. Інші 28 профілів експериментальні й працюють
+лише для читання. [Список моделей і подробиці сумісності](docs/compatibility.md).
+
+Керування виходами AC/DC і режимом заряджання реалізовано для незашифрованої
+AC180P, але фізичне перемикання в межах цього проєкту не перевірялося.
+Для зашифрованих з’єднань доступне лише читання.
+
+## Проблеми, побажання та зв’язок з автором
+
+У меню віджета виберіть **«Написати автору…»** або відкрийте форму на GitHub:
+
+- [Повідомити про проблему](https://github.com/wertalya/BluettiWidget/issues/new?template=bug-report.yml).
+- [Запропонувати покращення](https://github.com/wertalya/BluettiWidget/issues/new?template=feature-request.yml).
+- [Допомогти з підтримкою своєї моделі](https://github.com/wertalya/BluettiWidget/issues/new?template=model-request.yml).
+
+**Пишіть українською.** Для надсилання потрібен обліковий запис GitHub.
+Застосунок відкриває чернетку звернення, яку ви перевіряєте перед публікацією.
+Журнали, Bluetooth-адреса та серійний номер автоматично не додаються.
+
+## Де зберігаються налаштування
+
+Файл `settings.ini` та папка `logs/` розташовані поруч із програмою. Для
+встановленої версії це зазвичай `%LOCALAPPDATA%\Programs\BluettiWidget`.
+Для переносної версії використовуйте папку з правом запису.
+
+Щоб вручну задати ємність акумулятора, скористайтеся
+[зразком налаштувань](settings.example.ini) та
+[інструкцією](docs/compatibility.md#capacity-and-new-models).
+Не публікуйте весь `settings.ini`, адресу Bluetooth, серійний номер або
+необроблені журнали у відкритих зверненнях.
+
+## Для розробників
+
+Потрібні Python 3.12, Windows 11 і адаптер Bluetooth LE.
 
 ```powershell
 py -3.12 -m venv .venv
@@ -57,40 +127,10 @@ py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe widget.py
 ```
 
-The connection window scans automatically on first launch. Turn on Bluetooth
-on the PC and the station, select the station from the list and click
-**Підключити**. If the station is busy, close its connection in the BLUETTI phone
-app. The widget remembers the station when it receives a valid charge reading.
-
-- **Станція** opens the Bluetooth picker again. **↗** shows details and history.
-- **Телефон** releases Bluetooth for the phone. **Повернути** reconnects the widget.
-- **···** changes the size, opacity and placement. **×** hides the widget to the
-  system tray. Use the tray icon to show it again, or its menu to quit.
-- The tray icon displays the state of charge. Right-click it to manage
-  connection and appearance. The widget stays off the taskbar by default.
-  Enable **Показувати на панелі завдань** under **Вигляд і положення** to
-  keep a taskbar button while the widget is visible.
-- If telemetry stops, the widget marks the last readings and retries automatically.
-
-## Share a model profile
-
-Use **Запропонувати модель…** in the tray menu or open the
-[model report form](https://github.com/wertalya/BluettiWidget/issues/new?template=model-request.yml).
-Share the model, firmware, battery capacity and which readings work. Verified
-registers and field names are welcome. Submissions are reviewed before they
-become shared profiles. See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Local settings
-
-Set battery capacity in [settings.example.ini](settings.example.ini) by copying
-the relevant section to your local `settings.ini`. The executable stores your
-BLE address and rotating diagnostic logs beside itself. Use a writable folder.
-Keep settings, device identifiers and raw logs out of Git and public issues.
-
-## Build and check
+Перевірки, демонстраційний режим і збірка:
 
 ```powershell
-.\.venv\Scripts\python.exe -m unittest check_widget test_models test_feedback
+.\.venv\Scripts\python.exe -m unittest check_widget test_models test_feedback test_updates
 .\.venv\Scripts\python.exe widget.py --demo
 .\.venv\Scripts\python.exe -m pip install pyinstaller==6.22.3
 .\build.ps1
@@ -98,10 +138,13 @@ Keep settings, device identifiers and raw logs out of Git and public issues.
 .\build_installer.ps1
 ```
 
-Folder build: `dist/BluettiWidget/BluettiWidget.exe`.
-Single-file build: `portable/BluettiWidget.exe`.
-The Inno Setup 6 compiler produces `dist/installer/BluettiWidget-Setup.exe`.
-Both application builds embed the Windows app icon. Demo readings are synthetic.
-GitHub Actions verifies setup and uploads the installer and portable preview.
+Демонстраційні показники штучні. Для інсталятора потрібен Inno Setup 6.
+Результати збірки: `dist/installer/BluettiWidget-Setup.exe`,
+`dist/BluettiWidget/BluettiWidget.exe` і `portable/BluettiWidget.exe`.
+Переносна версія також доступна в [автоматичних збірках GitHub](https://github.com/wertalya/BluettiWidget/actions/workflows/build.yml)
+як архів **BluettiWidget-Windows-preview**. Для її оновлення закрийте програму,
+замініть EXE та залиште свій `settings.ini` поруч.
 
-Project code is MIT. See [THIRD_PARTY.md](THIRD_PARTY.md) for dependency licenses.
+[Як долучитися до проєкту](CONTRIBUTING.md) · [Сторонні компоненти](THIRD_PARTY.md).
+Код проєкту поширюється за ліцензією MIT. Неофіційний проєкт, не пов’язаний
+із виробником BLUETTI.

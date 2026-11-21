@@ -1,14 +1,16 @@
-# Third-party components
+# Сторонні компоненти та ліцензії
 
-The project's own code is MIT licensed. Dependencies retain their own licenses.
+Власний код BluettiWidget поширюється за ліцензією MIT. Сторонні компоненти
+зберігають свої ліцензії:
 
-- bluetti-bt-lib: MIT, https://github.com/Patrick762/bluetti-bt-lib
-- Bleak: MIT, https://github.com/hbldh/bleak
-- bleak-retry-connector: MIT, https://github.com/Bluetooth-Devices/bleak-retry-connector
-- PySide6 / Qt: LGPL-3.0 / GPL / commercial options, https://www.qt.io/qt-for-python
-- PyInstaller: GPL with bootloader exception, https://pyinstaller.org/
+- [bluetti-bt-lib](https://github.com/Patrick762/bluetti-bt-lib) — MIT.
+- [Bleak](https://github.com/hbldh/bleak) — MIT.
+- [bleak-retry-connector](https://github.com/Bluetooth-Devices/bleak-retry-connector) — MIT.
+- [PySide6 / Qt](https://www.qt.io/qt-for-python) — варіанти LGPL-3.0, GPL або комерційна ліцензія.
+- [PyInstaller](https://pyinstaller.org/) — GPL із винятком для завантажувача.
 
-Binary releases must include the applicable dependency license notices and
-rebuild instructions. Source is included with the folder build. Contributors
-must preserve Qt's applicable redistribution requirements when changing how
-its libraries are packaged. This document does not relicense any dependency.
+До випусків готової програми потрібно додавати відповідні ліцензійні
+повідомлення залежностей та інструкції відтворення збірки. Папкова збірка
+містить вихідний код. Змінюючи пакування бібліотек Qt, зберігайте застосовні
+вимоги до їх поширення. Цей документ не змінює ліцензій компонентів.
+Оригінальний текст ліцензії проєкту збережено у файлі [LICENSE](LICENSE).

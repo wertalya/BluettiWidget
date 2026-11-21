@@ -1,35 +1,35 @@
-name: BLUETTI model report
-description: Share model settings and hardware results for review.
-title: "[Model] "
+name: Допомогти з підтримкою моделі
+description: Поділіться параметрами станції та результатами перевірки.
+title: "[Модель] "
 body:
   - type: markdown
     attributes:
-      value: Submit only model-specific settings. Leave out settings.ini, .env, Bluetooth addresses, serial numbers, tokens, and unfiltered logs.
+      value: Додавайте лише параметри моделі. Не публікуйте settings.ini, .env, Bluetooth-адреси, серійні номери, токени та необроблені журнали.
   - type: input
     id: model
     attributes:
-      label: BLUETTI model
+      label: Модель BLUETTI
       placeholder: AC70
     validations:
       required: true
   - type: input
     id: firmware
     attributes:
-      label: Firmware and BluettiWidget version
+      label: Версія прошивки та BluettiWidget
   - type: input
     id: capacity
     attributes:
-      label: Installed battery capacity in Wh
-      description: Include expansion packs if fitted. Add a public source for the capacity if available.
+      label: Загальна встановлена ємність акумуляторів у Вт·год
+      description: Урахуйте додаткові акумулятори. За можливості додайте посилання на джерело ємності.
   - type: textarea
     id: results
     attributes:
-      label: Hardware results
-      description: Tell us whether discovery, charge, input/output and reconnection work. Include model-only settings such as the capacity override.
+      label: Що працює на вашій станції?
+      description: Опишіть пошук, заряд, вхідну та вихідну потужність і повторне підключення. Можна додати окремий параметр ємності моделі.
     validations:
       required: true
   - type: textarea
     id: protocol
     attributes:
-      label: Verified register or field mapping (optional)
-      description: Include field names, register ranges, units and a public reference when available.
+      label: Перевірені регістри або назви полів — за наявності
+      description: Укажіть назви полів, діапазони регістрів, одиниці вимірювання та посилання на джерело.

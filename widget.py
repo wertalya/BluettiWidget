@@ -860,8 +860,8 @@ class Panel(QWidget):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--demo', action='store_true')
-    parser.add_argument('--autostart', action='store_true', help='Use the saved startup visibility preference')
-    parser.add_argument('--start-in-tray', action='store_true', help='Start in the notification area')
+    parser.add_argument('--autostart', action='store_true', help='Використати збережені налаштування показу при автозапуску')
+    parser.add_argument('--start-in-tray', action='store_true', help='Запустити лише в треї біля годинника')
     parser.add_argument('--render', type=Path)
     parser.add_argument('--render-details', type=Path)
     parser.add_argument('--size', choices=SIZES)

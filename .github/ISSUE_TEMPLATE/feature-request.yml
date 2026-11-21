@@ -1,0 +1,16 @@
+name: Запропонувати покращення
+description: Розкажіть, якої можливості бракує або що варто зробити зручнішим.
+title: "[Побажання] "
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: Що ви хочете покращити?
+      description: Опишіть ситуацію, у якій вам бракує цієї можливості.
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Як це могло б працювати?
+      description: Можна додати приклад або знімок екрана без особистих даних.

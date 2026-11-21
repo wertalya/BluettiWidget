@@ -1,23 +1,39 @@
-# Contributing
+# Як долучитися до BluettiWidget
 
-Open a [model report](https://github.com/wertalya/BluettiWidget/issues/new?template=model-request.yml)
-with the model name, firmware version,
-Windows version, adapter type, and which readings match the official app.
-Remove Bluetooth addresses, serial numbers and personal paths from evidence.
-For a capacity contribution, include the model key and capacity in Wh, plus a
-public reference where available. Share only the model setting from your
-configuration. Reports inform reviewed profile changes.
+Обговорюємо проєкт і приймаємо звернення українською. Можна допомогти
+перевіркою своєї станції, описом проблеми, побажанням або змінами коду.
 
-Models with a charge field in the pinned BLE library receive a read-only
-profile automatically. Add an override in `models.py` when capacity, field
-names or register batches differ. Confirm register addresses against the
-upstream mapping or captured protocol evidence. Unknown models must
-never inherit another model's write registers by default. Start read-only.
+## Перевірка своєї моделі
 
-Include tests for model detection, telemetry parsing and unavailable fields.
-Runtime estimates require model-specific capacity and documented assumptions.
-Hardware reports should distinguish monitoring, reconnects and actual control
-tests. Do not test a power-off command with a critical load attached.
+Заповніть [форму підтримки моделі](https://github.com/wertalya/BluettiWidget/issues/new?template=model-request.yml).
+Укажіть модель станції, версію прошивки та Windows, тип Bluetooth-адаптера
+і показники, які збігаються з офіційним застосунком. Окремо зазначте, чи
+перевіряли ви пошук станції, моніторинг, повторне підключення та керування.
+Не позначайте керування перевіреним лише тому, що заряд відображається.
 
-Run the offline tests before submitting a pull request. Screenshots should
-come from demo mode or have personal identifiers removed.
+Для уточнення ємності додайте назву моделі, ємність у Вт·год та, за можливості,
+посилання на джерело. Діліться лише відповідним параметром моделі.
+Вилучіть Bluetooth-адреси, серійні номери й особисті шляхи до файлів зі знімків
+екрана та інших матеріалів. Не надсилайте весь `settings.ini` чи `.env`.
+
+## Зміни профілів станцій
+
+Моделі з полем заряду в зафіксованій версії бібліотеки `bluetti-bt-lib`
+отримують профіль лише для читання. У `models.py` задаються уточнення ємності,
+назв полів і груп регістрів. Адреси регістрів потрібно підтверджувати кодом
+бібліотеки або перевіреними даними протоколу. Невідома модель не повинна
+успадковувати команди запису іншої станції. Починайте з читання.
+
+Оцінка часу роботи потребує відомої ємності моделі та задокументованих
+припущень. Не перевіряйте вимкнення виходів із критично важливим навантаженням.
+
+## Перед надсиланням змін
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest check_widget test_models test_feedback test_updates
+```
+
+Додавайте перевірки там, де змінюється поведінка: розпізнавання моделей,
+обробка показників, відсутні поля та команди керування. Для знімків екрана
+використовуйте демонстраційний режим або приберіть особисті ідентифікатори.
+Опишіть українською, що виправлено, навіщо та як це перевірено.

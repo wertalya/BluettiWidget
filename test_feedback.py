@@ -9,7 +9,7 @@ class FeedbackTests(unittest.TestCase):
         self.assertEqual(parsed.netloc,'github.com')
         self.assertEqual(parsed.path,'/wertalya/BluettiWidget/issues/new')
         query=parse_qs(parsed.query)
-        self.assertEqual(query['title'],['[Bug] Не підключається'])
+        self.assertEqual(query['title'],['[Проблема] Не підключається'])
         self.assertIn('Опис & кроки #1',query['body'][0])
         self.assertNotIn('Модель',query['body'][0])
 

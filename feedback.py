@@ -5,7 +5,7 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (QDialog,QVBoxLayout,QHBoxLayout,QLabel,QComboBox,
     QLineEdit,QPlainTextEdit,QPushButton,QCheckBox)
 
-VERSION = '0.4.2-preview'
+VERSION = '0.4.3-preview'
 REPOSITORY = 'https://github.com/wertalya/BluettiWidget'
 
 
@@ -21,7 +21,7 @@ def issue_url(kind,title,description,model=None):
         from platform import system, release
         model = get_profile(model).model
         body += f'\n\n## Середовище\nBluettiWidget: {VERSION}\nМодель: {model}\nОС: {system()} {release()}'
-    prefix = '[Bug] ' if kind=='bug' else '[Idea] '
+    prefix = '[Проблема] ' if kind=='bug' else '[Побажання] '
     return REPOSITORY+'/issues/new?'+urlencode({'title':prefix+title.strip(),'body':body})
 
 class FeedbackDialog(QDialog):
