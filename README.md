@@ -112,10 +112,32 @@ AC180P, але фізичне перемикання в межах цього п
 Для переносної версії використовуйте папку з правом запису.
 
 Щоб вручну задати ємність акумулятора, скористайтеся
-[зразком налаштувань](settings.example.ini) та
+[зразком налаштувань](examples/settings.example.ini) та
 [інструкцією](docs/compatibility.md#capacity-and-new-models).
 Не публікуйте весь `settings.ini`, адресу Bluetooth, серійний номер або
 необроблені журнали у відкритих зверненнях.
+
+## Структура проєкту
+
+```text
+BluettiWidget/
+├── app/          # код віджета та підключення до станції
+├── assets/       # іконки
+├── docs/         # інструкції та документація
+├── examples/     # зразки налаштувань
+├── installer/    # налаштування інсталятора та пакування
+├── scripts/      # збірка, діагностика та допоміжні інструменти
+├── tests/        # автоматичні перевірки
+├── .github/      # форми звернень і автоматичні збірки
+├── run.py        # запуск віджета
+├── requirements.txt
+├── README.md
+└── LICENSE
+```
+
+Для встановлення готової програми достатньо завантажити інсталятор вище.
+Папки з кодом потрібні для розробки. Бібліотеки поруч із установленим EXE
+потрібні для роботи програми — вручну переносити їх не потрібно.
 
 ## Для розробників
 
@@ -124,18 +146,18 @@ AC180P, але фізичне перемикання в межах цього п
 ```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe widget.py
+.\.venv\Scripts\python.exe run.py
 ```
 
 Перевірки, демонстраційний режим і збірка:
 
 ```powershell
-.\.venv\Scripts\python.exe -m unittest check_widget test_models test_feedback test_updates
-.\.venv\Scripts\python.exe widget.py --demo
+.\.venv\Scripts\python.exe -m unittest discover -s tests
+.\.venv\Scripts\python.exe run.py --demo
 .\.venv\Scripts\python.exe -m pip install pyinstaller==6.22.3
-.\build.ps1
-.\.venv\Scripts\python.exe build_portable.py
-.\build_installer.ps1
+.\scripts\build.ps1
+.\.venv\Scripts\python.exe -m scripts.build_portable
+.\scripts\build_installer.ps1
 ```
 
 Демонстраційні показники штучні. Для інсталятора потрібен Inno Setup 6.
@@ -145,6 +167,6 @@ py -3.12 -m venv .venv
 як архів **BluettiWidget-Windows-preview**. Для її оновлення закрийте програму,
 замініть EXE та залиште свій `settings.ini` поруч.
 
-[Як долучитися до проєкту](CONTRIBUTING.md) · [Сторонні компоненти](THIRD_PARTY.md).
+[Як долучитися до проєкту](docs/CONTRIBUTING.md) · [Сторонні компоненти](docs/THIRD_PARTY.md).
 Код проєкту поширюється за ліцензією MIT. Неофіційний проєкт, не пов’язаний
 із виробником BLUETTI.

@@ -3,7 +3,7 @@ import asyncio
 import json
 import sys
 import time
-from powerlink import BluetoothWorker
+from app.powerlink import BluetoothWorker
 
 
 async def wait_for(predicate, timeout=50):

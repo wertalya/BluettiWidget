@@ -11,8 +11,8 @@ from PySide6.QtCore import QObject, QThread, QTimer, QUrl, Qt, Signal
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QDialog, QHBoxLayout, QPushButton, QVBoxLayout
 
-from feedback import REPOSITORY, VERSION
-from views import label
+from .feedback import REPOSITORY, VERSION
+from .views import label
 
 API_URL = 'https://api.github.com/repos/wertalya/BluettiWidget/releases?per_page=100'
 CHECK_INTERVAL_SECONDS = 6 * 60 * 60

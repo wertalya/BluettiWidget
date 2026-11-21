@@ -2,9 +2,9 @@ import asyncio
 import unittest
 from unittest.mock import AsyncMock, patch
 from bluetti_bt_lib.devices import DEVICES
-from models import PROFILES, SOC, detect_profile, get_profile
-from powerlink import BluetoothWorker
-from runtime_estimate import RuntimeEstimator
+from app.models import PROFILES, SOC, detect_profile, get_profile
+from app.powerlink import BluetoothWorker
+from app.runtime_estimate import RuntimeEstimator
 
 class ModelTests(unittest.TestCase):
     def test_detection_is_explicit_and_longest_model_wins(self):
@@ -58,8 +58,8 @@ class ModelTests(unittest.TestCase):
             worker.plan = worker.profile.read_plan(worker.device)
             worker.encrypted = True
             with patch.object(worker, 'find_device', AsyncMock()), \
-                 patch('powerlink.BleakClient', return_value=AsyncMock()), \
-                 patch('powerlink.DeviceReader') as reader:
+                 patch('app.powerlink.BleakClient', return_value=AsyncMock()), \
+                 patch('app.powerlink.DeviceReader') as reader:
                 reader.return_value.read = AsyncMock(return_value={SOC: 42})
                 self.assertEqual(await worker.read(), {SOC: 42})
                 self.assertEqual(reader.call_args.args[1].max_packs, 0)

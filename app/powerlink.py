@@ -14,7 +14,7 @@ from bleak.exc import BleakError
 from bluetti_bt_lib import DeviceReader, DeviceReaderConfig
 from bluetti_bt_lib.const import WRITE_UUID, NOTIFY_UUID
 from bluetti_bt_lib.registers import ReadableRegisters
-from models import POWER_FIELDS, SOC, detect_profile, get_profile
+from .models import POWER_FIELDS, SOC, detect_profile, get_profile
 
 WRITABLE = {"ctrl_ac", "ctrl_dc", "ctrl_charging_mode"}
 

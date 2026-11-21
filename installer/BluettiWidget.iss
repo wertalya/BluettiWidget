@@ -38,11 +38,10 @@ Name: "startup"; Description: "{cm:StartupTask}"
 Source: "dist\BluettiWidget\BluettiWidget.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\BluettiWidget\_internal\*"; DestDir: "{app}\_internal"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
-Source: "README.uk.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "LICENSE"; DestDir: "{app}"; Flags: ignoreversion
-Source: "THIRD_PARTY.md"; DestDir: "{app}"; Flags: ignoreversion
-Source: "settings.example.ini"; DestDir: "{app}"; Flags: ignoreversion
-Source: "docs\compatibility.md"; DestDir: "{app}\docs"; Flags: ignoreversion
+
+Source: "docs\*"; DestDir: "{app}\docs"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "examples\*"; DestDir: "{app}\examples"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [InstallDelete]
 Type: files; Name: "{userstartup}\BluettiWidget.lnk"

@@ -12,11 +12,11 @@ from bleak.exc import BleakError
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QCoreApplication, QEvent, Qt
 from bluetti_bt_lib.enums import ChargingMode
-from powerlink import BluetoothWorker, InvalidFrame, LiveSession, RegisterRejected, normalize
+from app.powerlink import BluetoothWorker, InvalidFrame, LiveSession, RegisterRejected, normalize
 from bluetti_bt_lib.registers import ReadableRegisters
 from bluetti_bt_lib.registers.DeviceRegister import modbus_crc
-from widget import Panel, STYLE, SIZES, describe_state, startup_hidden
-from runtime_estimate import RuntimeEstimator, runtime_hours, format_runtime
+from app.widget import Panel, STYLE, SIZES, describe_state, startup_hidden
+from app.runtime_estimate import RuntimeEstimator, runtime_hours, format_runtime
 
 
 SAMPLE = {"total_battery_percent": 70, "ac_input_power": 0, "dc_input_power": 0,
@@ -31,7 +31,7 @@ class Checks(unittest.TestCase):
         cls.app.setStyleSheet(STYLE)
         # Keep unit tests independent of Explorer's notification-area IPC.
         # The actual tray is checked with the packaged application separately.
-        cls.tray_patch = patch('widget.QSystemTrayIcon')
+        cls.tray_patch = patch('app.widget.QSystemTrayIcon')
         cls.tray_patch.start()
 
     @classmethod
@@ -162,7 +162,7 @@ class Checks(unittest.TestCase):
         asyncio.run(exercise())
 
     def test_start_in_tray_defers_picker_until_user_opens_widget(self):
-        with tempfile.TemporaryDirectory() as tmp, patch('widget.BluetoothWorker.start'):
+        with tempfile.TemporaryDirectory() as tmp, patch('app.widget.BluetoothWorker.start'):
             panel = Panel(settings_path=Path(tmp) / 'settings.ini', auto_open_picker=False)
             self.app.processEvents()
             self.assertFalse(panel.isVisible())
@@ -267,7 +267,7 @@ class Checks(unittest.TestCase):
             worker.address = 'TEST'
             device = type('Device', (), {'address': 'test'})()
             worker.cache_scan({'test': (device, None)})
-            with patch('powerlink.BleakScanner.discover', AsyncMock()) as scan:
+            with patch('app.powerlink.BleakScanner.discover', AsyncMock()) as scan:
                 self.assertIs(await worker.find_device(), device)
                 scan.assert_not_awaited()
         asyncio.run(exercise())
@@ -277,7 +277,7 @@ class Checks(unittest.TestCase):
             worker = BluetoothWorker()
             station = object()
             session = object()
-            with patch('powerlink.sys.platform', 'win32'), \
+            with patch('app.powerlink.sys.platform', 'win32'), \
                  patch.object(worker, 'find_device', AsyncMock(return_value=station)), \
                  patch.object(worker, 'disconnect', AsyncMock(return_value=True)), \
                  patch.object(worker, 'open_live', AsyncMock(side_effect=[
@@ -345,7 +345,7 @@ class Checks(unittest.TestCase):
             client = AsyncMock()
             live = LiveSession(client)
             with patch.object(worker, "ensure_live", AsyncMock(return_value=live)), \
-                 patch("powerlink.asyncio.sleep", AsyncMock()), \
+                 patch("app.powerlink.asyncio.sleep", AsyncMock()), \
                  patch.object(worker, "read", AsyncMock(return_value={"ctrl_ac": True})):
                 with self.assertRaisesRegex(RuntimeError, "не підтвердила"):
                     await worker.write("ctrl_ac", False)

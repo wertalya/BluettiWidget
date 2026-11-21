@@ -15,21 +15,24 @@ jobs:
         run: |
           python -m venv .venv
           .\.venv\Scripts\python.exe -m pip install -r requirements.txt pyinstaller==6.22.3
-      - name: Перевірка моделей та оновлень
-        run: |
-          .\.venv\Scripts\python.exe test_models.py
-          .\.venv\Scripts\python.exe test_feedback.py
-          .\.venv\Scripts\python.exe test_updates.py
       - name: Збірка та перевірки без станції
         shell: pwsh
         run: |
-          .\build.ps1
-          .\.venv\Scripts\python.exe build_portable.py
+          .\scripts\build.ps1
+          .\.venv\Scripts\python.exe -m scripts.build_portable
           if (Test-Path portable/settings.ini) { throw 'Особисті налаштування не повинні потрапляти до випуску' }
+          foreach ($variant in @('dist/BluettiWidget/BluettiWidget.exe', 'portable/BluettiWidget.exe')) {
+            $capture = Join-Path $env:RUNNER_TEMP (([guid]::NewGuid().ToString()) + '.png')
+            $arguments = @('--render', ('"' + $capture + '"'))
+            $app = Start-Process -FilePath $variant -ArgumentList $arguments -WindowStyle Hidden -PassThru
+            if (-not $app.WaitForExit(40000)) { Stop-Process -Id $app.Id; throw 'Перевірка запуску EXE перевищила час очікування' }
+            $app.Refresh()
+            if ($app.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $capture)) { throw 'Готовий EXE не зміг відобразити віджет' }
+          }
       - name: Збірка та перевірка інсталятора
         shell: pwsh
         run: |
-          .\build_installer.ps1
+          .\scripts\build_installer.ps1
           $installDir = Join-Path $env:RUNNER_TEMP 'BluettiWidget-setup-smoke'
           $startup = Join-Path ([Environment]::GetFolderPath('Startup')) 'BluettiWidget.lnk'
           $setupArguments = @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/SP-', '/NORESTART', "/DIR=`"$installDir`"")
@@ -65,8 +68,8 @@ jobs:
           path: |
             portable/BluettiWidget.exe
             LICENSE
-            THIRD_PARTY.md
+            docs/THIRD_PARTY.md
             README.md
-            README.uk.md
-            settings.example.ini
+            docs/README.uk.md
+            examples/settings.example.ini
             docs/compatibility.md

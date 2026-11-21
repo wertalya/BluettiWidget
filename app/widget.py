@@ -10,15 +10,15 @@ from PySide6.QtCore import Qt, QSettings, QTimer, QLockFile, QPoint
 from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPixmap, QActionGroup
 from PySide6.QtWidgets import (QApplication, QComboBox, QDialog, QGridLayout,
     QHBoxLayout, QMenu, QMessageBox, QPushButton, QSizePolicy, QSystemTrayIcon, QVBoxLayout, QWidget, QWidgetAction)
-from powerlink import BluetoothWorker
-from runtime_estimate import RuntimeEstimator, format_runtime
-from models import PROFILES, get_profile
-from feedback import FeedbackDialog, VERSION, open_model_report
-from updates import AutoUpdateMonitor, UpdateDialog
-from views import STYLE, INPUT, OUTPUT, GREEN, MUTED, InstrumentCluster, PowerHistory, label
+from .powerlink import BluetoothWorker
+from .runtime_estimate import RuntimeEstimator, format_runtime
+from .models import PROFILES, get_profile
+from .feedback import FeedbackDialog, VERSION, open_model_report
+from .updates import AutoUpdateMonitor, UpdateDialog
+from .views import STYLE, INPUT, OUTPUT, GREEN, MUTED, InstrumentCluster, PowerHistory, label
 
-APP_DIR = Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path(__file__).resolve().parent
-APP_ICON = Path(__file__).resolve().parent / 'assets' / 'bluetti-widget.ico'
+APP_DIR = Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path(__file__).resolve().parent.parent
+APP_ICON = Path(__file__).resolve().parent.parent / 'assets' / 'bluetti-widget.ico'
 SIZES = {'S': (320, 204), 'M': (360, 220), 'L': (420, 246)}
 
 

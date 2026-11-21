@@ -1,0 +1,1 @@
+"""Модулі BluettiWidget."""
