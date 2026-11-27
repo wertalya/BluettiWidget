@@ -17,6 +17,9 @@ from bluetti_bt_lib.registers import ReadableRegisters
 from .models import POWER_FIELDS, SOC, detect_profile, get_profile
 
 WRITABLE = {"ctrl_ac", "ctrl_dc", "ctrl_charging_mode"}
+REQUEST_TIMEOUT = 8
+REQUEST_GAP = .15
+CONTROL_POLL_SECONDS = 5
 
 
 class RegisterRejected(ValueError):
@@ -36,6 +39,8 @@ class LiveSession:
         self.register = None
         self.write_with_response = True
         self.unsupported = set()
+        self.next_request_at = 0.0
+        self.cached_blocks = {}
 
     def notification(self, sender, data):
         if self.pending is None or self.pending.done():
@@ -66,27 +71,42 @@ class LiveSession:
             self.pending.set_exception(ConnectionError("Bluetooth-з’єднання втрачено"))
 
     async def request(self, address, count):
+        delay = self.next_request_at - time.monotonic()
+        if delay > 0:
+            await asyncio.sleep(delay)
         self.register = ReadableRegisters(address, count)
         self.buffer.clear()
         self.pending = asyncio.get_running_loop().create_future()
         try:
-            async with asyncio.timeout(3):
+            stage = 'gatt_write'
+            async with asyncio.timeout(REQUEST_TIMEOUT):
                 await self.client.write_gatt_char(
                     WRITE_UUID, bytes(self.register), response=self.write_with_response
                 )
+                stage = 'station_reply'
                 frame = await self.pending
             return self.register.parse_response(frame)
+        except TimeoutError:
+            logging.warning('Bluetooth request timeout (register=%s, stage=%s, connected=%s)',
+                            address, stage, self.client.is_connected)
+            raise
         finally:
+            self.next_request_at = time.monotonic() + REQUEST_GAP
             # A disconnect can arrive before write_gatt_char itself fails.
             if self.pending.done() and not self.pending.cancelled():
                 self.pending.exception()
             self.pending.cancel()
             self.pending = None
 
-    async def read(self, device, plan):
+    async def read(self, device, plan, *, slow_blocks=(), force_controls=False):
         data = {}
         for index, block in enumerate(plan):
             if block in self.unsupported:
+                continue
+            cached = self.cached_blocks.get(block)
+            if (block in slow_blocks and not force_controls and cached is not None
+                    and time.monotonic() - cached[0] < CONTROL_POLL_SECONDS):
+                data.update(cached[1])
                 continue
             try:
                 try:
@@ -99,7 +119,10 @@ class LiveSession:
                     raise
                 self.unsupported.add(block)
                 continue
-            data.update(device.parse(block[0], body))
+            parsed = device.parse(block[0], body)
+            if block in slow_blocks:
+                self.cached_blocks[block] = (time.monotonic(), parsed)
+            data.update(parsed)
         return data
 
 
@@ -183,13 +206,13 @@ class BluetoothWorker(QThread):
     async def find_device(self):
         address = self.address.casefold()
         if time.monotonic() - self.scan_time < 60:
-            device = self.discovered.pop(address, None)
+            device = self.discovered.get(address)
             if device is not None:
                 return device
         self.status.emit("Шукаю станцію…")
         found = await BleakScanner.discover(timeout=8, return_adv=True)
         self.cache_scan(found)
-        device = self.discovered.pop(address, None)
+        device = self.discovered.get(address)
         if device is None:
             raise RuntimeError("Станція недоступна. Перевір відстань і з’єднання на телефоні.")
         return device
@@ -224,14 +247,16 @@ class BluetoothWorker(QThread):
                 self.live.disconnected(client)
 
         options = {"winrt": {"use_cached_services": False}} if uncached else {}
-        client = BleakClient(device, timeout=12, disconnected_callback=on_disconnected, **options)
+        client = BleakClient(device, timeout=20, disconnected_callback=on_disconnected, **options)
         self.live = LiveSession(client)
-        async with asyncio.timeout(12):
+        async with asyncio.timeout(20):
             await client.connect()
             characteristic = client.services.get_characteristic(WRITE_UUID)
             if characteristic is None:
                 raise BleakError("У станції немає очікуваного Bluetooth-сервісу")
-            self.live.write_with_response = 'write' in characteristic.properties
+            # Modbus notification is the actual reply. Avoid a second ATT
+            # acknowledgement when the peripheral supports write commands.
+            self.live.write_with_response = 'write-without-response' not in characteristic.properties
             await client.start_notify(NOTIFY_UUID, self.live.notification)
         self.status.emit("Отримую живі показники…")
         return self.live
@@ -256,12 +281,16 @@ class BluetoothWorker(QThread):
                             "encrypted": b"BLUETTE" in marker})
         self.devices.emit(sorted(devices, key=lambda item: item["name"]))
 
-    async def read(self):
+    async def read(self, *, force_controls=False):
         loop = asyncio.get_running_loop()
         if not self.encrypted:
-            async with asyncio.timeout(40):
-                live = await self.ensure_live()
-                data = await live.read(self.device, self.plan)
+            live = await self.ensure_live()
+            # Connect/discovery and data transfer have independent budgets.
+            # A slow Windows connection must not consume the reply timeout.
+            slow = ((2011, 2), (2020, 1)) if self.profile.model == 'AC180P' else ()
+            async with asyncio.timeout(max(40, len(self.plan) * (REQUEST_TIMEOUT + 1))):
+                data = await live.read(self.device, self.plan, slow_blocks=slow,
+                                       force_controls=force_controls)
             data = normalize(data, self.profile.aliases)
             self.last_read = time.monotonic()
             self.reading.emit(data)
@@ -312,7 +341,7 @@ class BluetoothWorker(QThread):
         # Read back actual state. A successful GATT write alone is not confirmation.
         await live.client.write_gatt_char(WRITE_UUID, bytes(command), response=live.write_with_response)
         await asyncio.sleep(.25)
-        data = await self.read()
+        data = await self.read(force_controls=True)
         if data.get(field) != value:
             raise RuntimeError("Станція не підтвердила зміну. Перевір стан у застосунку BLUETTI.")
 
